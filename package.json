@@ -1,11 +1,13 @@
 {
   "name": "africon-attendance",
-  "version": "1.0.0",
-  "description": "Africon Event Attendance Tracker",
+  "version": "2.0.0",
+  "description": "Africon Event Attendance Tracker with Admin Dashboard",
   "engines": {
     "node": "22.x"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
     "pg": "^8.11.3"
   }
 }

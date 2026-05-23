@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Africon — Take Attendance</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0052CC 0%, #1a7a3f 100%);
+      min-height: 100vh; padding: 20px;
+    }
+    .container { max-width:700px; margin:0 auto; }
+    .header { text-align:center; color:white; margin-bottom:24px; }
+    .brand-name { font-size:26px; font-weight:700; letter-spacing:2px; }
+    .brand-sub { font-size:12px; color:#6FCF97; letter-spacing:1px; margin-top:2px; }
+    .event-name { font-size:22px; font-weight:600; margin-top:14px; }
+    .event-date { font-size:13px; opacity:.8; margin-top:4px; }
+    .card { background:white; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,.15); padding:24px; }
+    .instructions { font-size:13px; color:#666; text-align:center; margin-bottom:16px; line-height:1.5; }
+    .search-wrap { position:relative; margin-bottom:16px; }
+    .search-wrap input {
+      width:100%; padding:12px 14px 12px 38px;
+      border:1px solid #ddd; border-radius:8px;
+      font-size:14px; font-family:inherit;
+    }
+    .search-wrap input:focus { outline:none; border-color:#0052CC; box-shadow:0 0 0 3px rgba(0,82,204,.1); }
+    .search-wrap i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#aaa; }
+    .stats-row { display:flex; gap:10px; margin-bottom:16px; }
+    .stat-pill { flex:1; background:#f0f4ff; border-radius:8px; padding:10px; text-align:center; }
+    .stat-pill-val { font-size:22px; font-weight:700; color:#0052CC; }
+    .stat-pill-lbl { font-size:10px; text-transform:uppercase; color:#666; font-weight:600; }
+    .attendee-list { display:flex; flex-direction:column; gap:8px; max-height:55vh; overflow-y:auto; padding-right:2px; }
+    .at-item {
+      display:flex; align-items:center; gap:12px;
+      padding:12px 14px; border-radius:8px; border:2px solid #eee;
+      cursor:pointer; transition:all .15s; background:white; user-select:none;
+    }
+    .at-item:hover { border-color:#0052CC; box-shadow:0 2px 8px rgba(0,82,204,.1); }
+    .at-item.attended { background:#d4edda; border-color:#28a745; }
+    .at-item.not-attended { background:#fff8f8; border-color:#eee; }
+    .at-item.busy { opacity:.5; pointer-events:none; }
+    .avatar {
+      width:38px; height:38px; border-radius:50%;
+      background:#0052CC; color:white;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:14px; flex-shrink:0;
+    }
+    .at-item.attended .avatar { background:#28a745; }
+    .at-info { flex:1; min-width:0; }
+    .at-name { font-weight:600; font-size:14px; color:#333; }
+    .at-sub  { font-size:11px; color:#999; margin-top:2px; }
+    .at-status { font-size:20px; flex-shrink:0; }
+    .attended .at-status { color:#28a745; }
+    .not-attended .at-status { color:#ddd; }
+    .state-msg { text-align:center; padding:40px 20px; color:#aaa; font-size:14px; }
+    .state-msg i { font-size:28px; display:block; margin-bottom:10px; }
+    .toast {
+      position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+      background:#222; color:white; padding:10px 20px; border-radius:20px;
+      font-size:13px; opacity:0; transition:opacity .3s; pointer-events:none; z-index:999;
+    }
+    .toast.show { opacity:1; }
+    .privacy { color:rgba(255,255,255,.6); font-size:11px; text-align:center; margin-top:16px; line-height:1.5; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand-name">AFRICON</div>
+      <div class="brand-sub">AI FOR GROWTH</div>
+      <div class="event-name" id="ev-name">Loading…</div>
+      <div class="event-date" id="ev-date"></div>
+    </div>
+
+    <div class="card">
+      <p class="instructions">Find your name below and tap it to mark your attendance.</p>
+
+      <div class="stats-row">
+        <div class="stat-pill"><div class="stat-pill-val" id="s-attended">0</div><div class="stat-pill-lbl">Attended</div></div>
+        <div class="stat-pill"><div class="stat-pill-val" id="s-total">0</div><div class="stat-pill-lbl">Registered</div></div>
+        <div class="stat-pill"><div class="stat-pill-val" id="s-rate">0%</div><div class="stat-pill-lbl">Rate</div></div>
+      </div>
+
+      <div class="search-wrap">
+        <i class="fas fa-search"></i>
+        <input type="text" id="search" placeholder="Search your name…" oninput="render()">
+      </div>
+
+      <div class="attendee-list" id="list">
+        <div class="state-msg"><i class="fas fa-spinner fa-spin"></i>Loading attendees…</div>
+      </div>
+    </div>
+
+    <p class="privacy">&#x1F512; Your data is used for event records only and will not be shared.</p>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const slug = new URLSearchParams(location.search).get('event');
+    if (!slug) {
+      document.getElementById('ev-name').textContent = 'Invalid link';
+    }
+
+    let eventId   = null;
+    let attendees = [];
+
+    async function init() {
+      try {
+        const evRes = await fetch(`/api/events/${slug}`);
+        if (!evRes.ok) {
+          document.getElementById('ev-name').textContent = 'Event not found';
+          document.getElementById('list').innerHTML = '<div class="state-msg"><i class="fas fa-exclamation-triangle" style="color:#dc3545"></i>This event link is invalid or expired.</div>';
+          return;
+        }
+        const ev = await evRes.json();
+        eventId = ev.id;
+        document.getElementById('ev-name').textContent = ev.name;
+        document.getElementById('ev-date').textContent = new Date(ev.event_date).toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+        document.title = `${ev.name} — Attendance`;
+
+        const attRes = await fetch(`/api/events/${eventId}/attendees`);
+        attendees = await attRes.json();
+        render();
+        updateStats();
+      } catch (e) {
+        document.getElementById('list').innerHTML = '<div class="state-msg"><i class="fas fa-exclamation-triangle" style="color:#dc3545"></i>Failed to load. Please refresh.</div>';
+      }
+    }
+
+    function render() {
+      const filter = document.getElementById('search').value.toLowerCase();
+      const list   = document.getElementById('list');
+
+      const filtered = filter
+        ? attendees.filter(a => a.name.toLowerCase().includes(filter) || (a.phone||'').includes(filter))
+        : attendees;
+
+      if (!filtered.length) {
+        list.innerHTML = `<div class="state-msg"><i class="fas fa-search"></i>${filter ? 'No one found matching "' + esc(filter) + '"' : 'No attendees registered.'}</div>`;
+        return;
+      }
+
+      list.innerHTML = filtered.map(a => {
+        const initials = a.name.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
+        const sub = [a.phone, a.email].filter(Boolean).join(' · ');
+        return `<div class="at-item ${a.attended ? 'attended' : 'not-attended'}" data-id="${a.id}" onclick="toggle(${a.id})">
+          <div class="avatar">${initials}</div>
+          <div class="at-info">
+            <div class="at-name">${esc(a.name)}</div>
+            ${sub ? `<div class="at-sub">${esc(sub)}</div>` : ''}
+          </div>
+          <div class="at-status"><i class="fas ${a.attended ? 'fa-check-circle' : 'fa-circle'}"></i></div>
+        </div>`;
+      }).join('');
+    }
+
+    async function toggle(id) {
+      const el = document.querySelector(`[data-id="${id}"]`);
+      if (el) el.classList.add('busy');
+
+      try {
+        const res = await fetch(`/api/events/${eventId}/attendance`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attendee_id: id }),
+        });
+        if (!res.ok) throw new Error();
+        const updated = await res.json();
+        const idx = attendees.findIndex(a => a.id === id);
+        if (idx !== -1) attendees[idx] = updated;
+        render();
+        updateStats();
+        toast(updated.attended ? '&#x2705; Attendance marked!' : 'Attendance removed');
+      } catch {
+        toast('Failed — try again');
+        if (el) el.classList.remove('busy');
+      }
+    }
+
+    function updateStats() {
+      const total    = attendees.length;
+      const attended = attendees.filter(a => a.attended).length;
+      const rate     = total === 0 ? 0 : Math.round((attended / total) * 100);
+      document.getElementById('s-attended').textContent = attended;
+      document.getElementById('s-total').textContent    = total;
+      document.getElementById('s-rate').textContent     = rate + '%';
+    }
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.innerHTML = msg; el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+    function esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    if (slug) init();
+  </script>
+</body>
+</html>

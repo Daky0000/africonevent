@@ -7,52 +7,66 @@ const pool = new Pool({
 
 let initialized = false;
 
-const INITIAL_ATTENDEES = [
-  ['Nicholas Yao Gakpetor', '0242246138'],
-  ['Solomon Sappor', '+233268727284'],
-  ['Nick Bossah', '+233545922261'],
-  ['Andrew Tetteh', '+233243571210'],
-  ['Stephen Owusu-Duah', '0544111131'],
-  ['Jonas Yao Korto', '0243302779'],
-  ['Savior Ewatey', '0262593173'],
-  ['Therestella Aidoo', '0504549553'],
-  ['Gordon Dodoo', '+233245425735'],
-  ['Lawrence Nanor', '+233262406104'],
-  ['Cornelius Ohene Basewah', '+233541538847'],
-  ['Armah Emmanuel', '+233243366441'],
-  ['Gilceilder Yaa Yeboah', '+233206959633'],
-  ['Nathaniel Fiifi Nsafoah', '0209609598'],
-  ['Edward Bosomtwe Eshun', '0202030065'],
-  ['Nana Kwame Ayeh', '+233242637137'],
-  ['Sebastian Besa Gadah', '0241704385'],
-  ['Philip Isaac Adubeng', '0559052945'],
-  ['Raymond Mills', '0200196327'],
-  ['Grace Awotwe', '0244436680'],
-  ['Lois Appiah', '+233244576998'],
-  ['Felix Afari', '+233244985318'],
-];
-
 async function initDB() {
   if (initialized) return;
 
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS attendees (
-      id        SERIAL PRIMARY KEY,
-      name      VARCHAR(255) NOT NULL,
-      phone     VARCHAR(50)  NOT NULL,
-      attended  BOOLEAN      NOT NULL DEFAULT FALSE,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    CREATE TABLE IF NOT EXISTS admins (
+      id            SERIAL PRIMARY KEY,
+      name          VARCHAR(255) NOT NULL,
+      email         VARCHAR(255) NOT NULL UNIQUE,
+      password_hash VARCHAR(255) NOT NULL,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
 
-  const { rows } = await pool.query('SELECT COUNT(*) AS count FROM attendees');
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS events (
+      id          SERIAL PRIMARY KEY,
+      name        VARCHAR(255) NOT NULL,
+      description TEXT,
+      event_date  DATE NOT NULL,
+      slug        VARCHAR(100) NOT NULL UNIQUE,
+      created_by  INTEGER REFERENCES admins(id),
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.tables WHERE table_name = 'attendees'
+      ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'attendees' AND column_name = 'event_id'
+      ) THEN
+        DROP TABLE attendees;
+      END IF;
+    END $$;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS attendees (
+      id          SERIAL PRIMARY KEY,
+      event_id    INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      name        VARCHAR(255) NOT NULL,
+      phone       VARCHAR(50),
+      email       VARCHAR(255),
+      attended    BOOLEAN NOT NULL DEFAULT FALSE,
+      attended_at TIMESTAMPTZ,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  const { rows } = await pool.query('SELECT COUNT(*) AS count FROM admins');
   if (parseInt(rows[0].count, 10) === 0) {
-    for (const [name, phone] of INITIAL_ATTENDEES) {
-      await pool.query(
-        'INSERT INTO attendees (name, phone) VALUES ($1, $2)',
-        [name, phone]
-      );
-    }
+    const bcrypt = require('bcryptjs');
+    const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'africon2024', 10);
+    await pool.query(
+      'INSERT INTO admins (name, email, password_hash) VALUES ($1, $2, $3)',
+      ['Africon Admin', process.env.ADMIN_EMAIL || 'admin@africon.com', hash]
+    );
   }
 
   initialized = true;

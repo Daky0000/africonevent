@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Africon Admin — Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#f0f2f5; min-height:100vh; }
+    /* NAV */
+    nav {
+      background: #0052CC; color: white;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 56px;
+    }
+    .nav-brand { font-size:18px; font-weight:700; letter-spacing:2px; }
+    .nav-brand span { color:#6FCF97; font-size:11px; display:block; letter-spacing:1px; font-weight:400; }
+    .nav-right { display:flex; align-items:center; gap:16px; font-size:13px; }
+    .nav-right button { background:rgba(255,255,255,0.15); color:white; border:none; border-radius:5px; padding:6px 14px; cursor:pointer; font-size:13px; }
+    .nav-right button:hover { background:rgba(255,255,255,0.25); }
+    /* MAIN */
+    .main { max-width: 1100px; margin: 0 auto; padding: 28px 20px; }
+    /* TABS */
+    .tabs { display:flex; gap:4px; margin-bottom:24px; border-bottom:2px solid #ddd; }
+    .tab { padding:10px 20px; cursor:pointer; font-size:14px; font-weight:600; color:#666; border-bottom:2px solid transparent; margin-bottom:-2px; }
+    .tab.active { color:#0052CC; border-bottom-color:#0052CC; }
+    .pane { display:none; }
+    .pane.active { display:block; }
+    /* CARDS */
+    .summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px; margin-bottom:28px; }
+    .scard { background:white; border-radius:8px; padding:18px; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+    .scard-val { font-size:30px; font-weight:700; color:#0052CC; }
+    .scard-lbl { font-size:11px; color:#999; text-transform:uppercase; font-weight:600; margin-top:4px; }
+    /* SECTION */
+    .section { background:white; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.08); margin-bottom:20px; }
+    .section-hd { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #eee; }
+    .section-hd h3 { font-size:15px; color:#333; }
+    .section-body { padding:20px; }
+    /* FORM */
+    .frow { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+    .frow.three { grid-template-columns:1fr 1fr 1fr; }
+    .frow.one { grid-template-columns:1fr; }
+    input, textarea, select {
+      padding:9px 12px; border:1px solid #ddd; border-radius:6px;
+      font-size:13px; font-family:inherit; width:100%;
+    }
+    input:focus, textarea:focus { outline:none; border-color:#0052CC; }
+    .btn-primary { background:#0052CC; color:white; border:none; border-radius:6px; padding:9px 20px; font-weight:600; font-size:13px; cursor:pointer; }
+    .btn-primary:hover { background:#003d99; }
+    .btn-primary:disabled { background:#999; cursor:not-allowed; }
+    .btn-danger { background:#dc3545; color:white; border:none; border-radius:5px; padding:5px 12px; font-size:12px; cursor:pointer; }
+    .btn-danger:hover { background:#b02a37; }
+    .btn-sm { background:#0052CC; color:white; border:none; border-radius:5px; padding:5px 12px; font-size:12px; cursor:pointer; }
+    .btn-sm:hover { background:#003d99; }
+    /* TABLE */
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { text-align:left; padding:9px 12px; background:#f8f9fa; color:#555; font-weight:600; font-size:11px; text-transform:uppercase; border-bottom:1px solid #eee; }
+    td { padding:9px 12px; border-bottom:1px solid #f0f0f0; color:#333; vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:#fafafa; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; }
+    .badge-green { background:#d4edda; color:#155724; }
+    .badge-blue { background:#cce5ff; color:#004085; }
+    .err { background:#fdecea; color:#c0392b; border-radius:6px; padding:9px 14px; font-size:12px; margin-bottom:12px; display:none; }
+    .ok { background:#d4edda; color:#155724; border-radius:6px; padding:9px 14px; font-size:12px; margin-bottom:12px; display:none; }
+    .empty { text-align:center; padding:30px; color:#aaa; font-size:13px; }
+    @media(max-width:600px){ .frow,.frow.three{ grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-brand">AFRICON <span>AI FOR GROWTH</span></div>
+    <div class="nav-right">
+      <span id="admin-name"></span>
+      <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="summary">
+      <div class="scard"><div class="scard-val" id="s-events">—</div><div class="scard-lbl">Events</div></div>
+      <div class="scard"><div class="scard-val" id="s-total">—</div><div class="scard-lbl">Total Registrants</div></div>
+      <div class="scard"><div class="scard-val" id="s-attended">—</div><div class="scard-lbl">Attended</div></div>
+      <div class="scard"><div class="scard-val" id="s-rate">—</div><div class="scard-lbl">Avg Attendance</div></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('events')">Events</div>
+      <div class="tab" onclick="switchTab('admins')">Admins</div>
+    </div>
+
+    <!-- EVENTS TAB -->
+    <div id="pane-events" class="pane active">
+      <div class="section">
+        <div class="section-hd">
+          <h3>Create New Event</h3>
+        </div>
+        <div class="section-body">
+          <div id="ev-err" class="err"></div>
+          <div id="ev-ok" class="ok"></div>
+          <div class="frow">
+            <input id="ev-name" placeholder="Event name e.g. Africon Workshop May 2025">
+            <input id="ev-date" type="date">
+          </div>
+          <div class="frow">
+            <input id="ev-slug" placeholder="URL slug e.g. africon-may-2025">
+            <input id="ev-desc" placeholder="Description (optional)">
+          </div>
+          <button class="btn-primary" id="ev-btn" onclick="createEvent()">Create Event</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-hd"><h3>All Events</h3></div>
+        <div class="section-body" style="padding:0">
+          <div id="events-table-wrap">
+            <div class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMINS TAB -->
+    <div id="pane-admins" class="pane">
+      <div class="section">
+        <div class="section-hd"><h3>Add New Admin</h3></div>
+        <div class="section-body">
+          <div id="adm-err" class="err"></div>
+          <div id="adm-ok" class="ok"></div>
+          <div class="frow three">
+            <input id="adm-name" placeholder="Full name">
+            <input id="adm-email" type="email" placeholder="Email">
+            <input id="adm-pass" type="password" placeholder="Password">
+          </div>
+          <button class="btn-primary" id="adm-btn" onclick="addAdmin()">Add Admin</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-hd"><h3>Admins</h3></div>
+        <div class="section-body" style="padding:0">
+          <div id="admins-table-wrap"><div class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/admin/login.html';
+
+    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+
+    async function init() {
+      const res = await fetch('/api/auth/me', { headers });
+      if (!res.ok) { localStorage.removeItem('token'); window.location.href = '/admin/login.html'; return; }
+      const me = await res.json();
+      document.getElementById('admin-name').textContent = me.name;
+      loadEvents(); loadAdmins();
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['events','admins'][i] === name));
+      document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+      document.getElementById('pane-' + name).classList.add('active');
+    }
+
+    let eventsData = [];
+
+    async function loadEvents() {
+      const res = await fetch('/api/events', { headers });
+      if (!res.ok) return;
+      eventsData = await res.json();
+      renderEvents();
+      updateSummary();
+    }
+
+    function renderEvents() {
+      const wrap = document.getElementById('events-table-wrap');
+      if (!eventsData.length) { wrap.innerHTML = '<div class="empty">No events yet. Create one above.</div>'; return; }
+      wrap.innerHTML = `<table>
+        <thead><tr>
+          <th>Event</th><th>Date</th><th>Registrants</th><th>Attended</th><th>Rate</th><th>Actions</th>
+        </tr></thead>
+        <tbody>${eventsData.map(e => {
+          const rate = e.total_attendees > 0 ? Math.round((e.attended_count / e.total_attendees) * 100) : 0;
+          return `<tr>
+            <td><strong>${esc(e.name)}</strong><br><small style="color:#999">${esc(e.slug)}</small></td>
+            <td>${new Date(e.event_date).toLocaleDateString()}</td>
+            <td>${e.total_attendees}</td>
+            <td>${e.attended_count}</td>
+            <td><span class="badge ${rate>=50?'badge-green':'badge-blue'}">${rate}%</span></td>
+            <td>
+              <button class="btn-sm" onclick="openEvent(${e.id})"><i class="fas fa-edit"></i> Manage</button>
+              <button class="btn-danger" style="margin-left:6px" onclick="deleteEvent(${e.id},'${esc(e.name)}')"><i class="fas fa-trash"></i></button>
+            </td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+    }
+
+    function updateSummary() {
+      const total = eventsData.reduce((s,e) => s + e.total_attendees, 0);
+      const attended = eventsData.reduce((s,e) => s + e.attended_count, 0);
+      const rate = total > 0 ? Math.round((attended/total)*100) : 0;
+      document.getElementById('s-events').textContent = eventsData.length;
+      document.getElementById('s-total').textContent = total;
+      document.getElementById('s-attended').textContent = attended;
+      document.getElementById('s-rate').textContent = rate + '%';
+    }
+
+    async function createEvent() {
+      const name = document.getElementById('ev-name').value.trim();
+      const date = document.getElementById('ev-date').value;
+      const slug = document.getElementById('ev-slug').value.trim();
+      const desc = document.getElementById('ev-desc').value.trim();
+      const btn  = document.getElementById('ev-btn');
+      hide('ev-err'); hide('ev-ok');
+
+      if (!name || !date || !slug) { show('ev-err', 'Name, date and slug are required'); return; }
+
+      btn.disabled = true; btn.textContent = 'Creating…';
+      const res = await fetch('/api/events', { method:'POST', headers, body: JSON.stringify({name,description:desc,event_date:date,slug}) });
+      const data = await res.json();
+      btn.disabled = false; btn.textContent = 'Create Event';
+      if (!res.ok) { show('ev-err', data.error); return; }
+      show('ev-ok', `Event "${data.name}" created!`);
+      ['ev-name','ev-date','ev-slug','ev-desc'].forEach(id => document.getElementById(id).value = '');
+      loadEvents();
+    }
+
+    async function deleteEvent(id, name) {
+      if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+      await fetch(`/api/events/${id}`, { method:'DELETE', headers });
+      loadEvents();
+    }
+
+    function openEvent(id) {
+      window.location.href = `/admin/event.html?id=${id}`;
+    }
+
+    async function loadAdmins() {
+      const res = await fetch('/api/admins', { headers });
+      if (!res.ok) return;
+      const admins = await res.json();
+      const wrap = document.getElementById('admins-table-wrap');
+      if (!admins.length) { wrap.innerHTML = '<div class="empty">No admins found.</div>'; return; }
+      wrap.innerHTML = `<table>
+        <thead><tr><th>Name</th><th>Email</th><th>Added</th></tr></thead>
+        <tbody>${admins.map(a => `<tr>
+          <td>${esc(a.name)}</td>
+          <td>${esc(a.email)}</td>
+          <td>${new Date(a.created_at).toLocaleDateString()}</td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+    }
+
+    async function addAdmin() {
+      const name  = document.getElementById('adm-name').value.trim();
+      const email = document.getElementById('adm-email').value.trim();
+      const pass  = document.getElementById('adm-pass').value;
+      const btn   = document.getElementById('adm-btn');
+      hide('adm-err'); hide('adm-ok');
+
+      if (!name || !email || !pass) { show('adm-err', 'All fields required'); return; }
+
+      btn.disabled = true; btn.textContent = 'Adding…';
+      const res = await fetch('/api/admins', { method:'POST', headers, body: JSON.stringify({name,email,password:pass}) });
+      const data = await res.json();
+      btn.disabled = false; btn.textContent = 'Add Admin';
+      if (!res.ok) { show('adm-err', data.error); return; }
+      show('adm-ok', `${data.name} added as admin.`);
+      ['adm-name','adm-email','adm-pass'].forEach(id => document.getElementById(id).value = '');
+      loadAdmins();
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method:'POST', headers });
+      localStorage.removeItem('token');
+      window.location.href = '/admin/login.html';
+    }
+
+    function show(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block'; }
+    function hide(id) { document.getElementById(id).style.display = 'none'; }
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    init();
+  </script>
+</body>
+</html>

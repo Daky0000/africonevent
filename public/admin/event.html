@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Africon Admin — Event</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#f0f2f5; min-height:100vh; }
+    nav { background:#0052CC; color:white; display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:56px; }
+    .nav-brand { font-size:18px; font-weight:700; letter-spacing:2px; }
+    .nav-brand span { color:#6FCF97; font-size:11px; display:block; letter-spacing:1px; font-weight:400; }
+    .back-btn { color:white; text-decoration:none; font-size:13px; display:flex; align-items:center; gap:6px; }
+    .back-btn:hover { opacity:.8; }
+    .main { max-width:1100px; margin:0 auto; padding:28px 20px; }
+    .event-hd { background:white; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.08); padding:20px 24px; margin-bottom:20px; display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+    .event-hd-info h2 { font-size:20px; color:#222; }
+    .event-hd-info p { font-size:13px; color:#666; margin-top:4px; }
+    .url-box { display:flex; align-items:center; gap:8px; background:#f0f4ff; border:1px solid #cce; border-radius:6px; padding:8px 12px; font-size:12px; color:#0052CC; cursor:pointer; }
+    .url-box:hover { background:#e0e8ff; }
+    .tabs { display:flex; gap:4px; margin-bottom:20px; border-bottom:2px solid #ddd; }
+    .tab { padding:10px 20px; cursor:pointer; font-size:14px; font-weight:600; color:#666; border-bottom:2px solid transparent; margin-bottom:-2px; }
+    .tab.active { color:#0052CC; border-bottom-color:#0052CC; }
+    .pane { display:none; }
+    .pane.active { display:block; }
+    .section { background:white; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.08); margin-bottom:20px; }
+    .section-hd { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid #eee; }
+    .section-hd h3 { font-size:14px; color:#333; font-weight:600; }
+    .section-body { padding:18px 20px; }
+    input, textarea { padding:9px 12px; border:1px solid #ddd; border-radius:6px; font-size:13px; font-family:inherit; width:100%; }
+    input:focus, textarea:focus { outline:none; border-color:#0052CC; }
+    .frow { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+    .frow.three { grid-template-columns:1fr 1fr 1fr; }
+    .btn-primary { background:#0052CC; color:white; border:none; border-radius:6px; padding:9px 18px; font-weight:600; font-size:13px; cursor:pointer; }
+    .btn-primary:hover { background:#003d99; }
+    .btn-primary:disabled { background:#999; cursor:not-allowed; }
+    .btn-danger { background:none; border:none; color:#dc3545; cursor:pointer; font-size:13px; padding:4px 8px; border-radius:4px; }
+    .btn-danger:hover { background:#fdecea; }
+    .err { background:#fdecea; color:#c0392b; border-radius:6px; padding:9px 14px; font-size:12px; margin-bottom:10px; display:none; }
+    .ok  { background:#d4edda; color:#155724; border-radius:6px; padding:9px 14px; font-size:12px; margin-bottom:10px; display:none; }
+    /* UPLOAD */
+    .drop-zone { border:2px dashed #ccc; border-radius:8px; padding:28px; text-align:center; cursor:pointer; transition:border-color .2s; color:#999; font-size:13px; }
+    .drop-zone:hover, .drop-zone.drag { border-color:#0052CC; color:#0052CC; }
+    .drop-zone i { font-size:24px; margin-bottom:8px; display:block; }
+    /* ATTENDEES */
+    .search-box { margin-bottom:14px; }
+    .search-box input { padding:10px 12px; }
+    .at-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid #eee; border-radius:6px; margin-bottom:6px; cursor:pointer; transition:all .15s; }
+    .at-item:hover { border-color:#0052CC; }
+    .at-item.attended { background:#d4edda; border-color:#28a745; }
+    .at-item.not-attended { background:#f8d7da; border-color:#dc3545; }
+    .at-item.busy { opacity:.5; pointer-events:none; }
+    .at-info { flex:1; min-width:0; }
+    .at-name { font-weight:600; font-size:13px; color:#333; }
+    .at-meta { font-size:11px; color:#999; }
+    .at-icon { font-size:16px; }
+    .attended .at-icon { color:#28a745; }
+    .not-attended .at-icon { color:#dc3545; }
+    /* REPORT */
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:14px; margin-bottom:20px; }
+    .stat-card { background:#f8f9fa; border:1px solid #e0e0e0; border-radius:8px; padding:18px; text-align:center; }
+    .stat-val { font-size:28px; font-weight:700; color:#0052CC; }
+    .stat-lbl { font-size:11px; color:#999; text-transform:uppercase; font-weight:600; margin-top:4px; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { text-align:left; padding:8px 12px; background:#f8f9fa; color:#555; font-weight:600; font-size:11px; text-transform:uppercase; border-bottom:1px solid #eee; }
+    td { padding:8px 12px; border-bottom:1px solid #f0f0f0; color:#333; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; }
+    .badge-green { background:#d4edda; color:#155724; }
+    .badge-red   { background:#f8d7da; color:#721c24; }
+    .export-btn { background:#1a7a3f; color:white; border:none; border-radius:6px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; }
+    .export-btn:hover { background:#155732; }
+    .empty { text-align:center; padding:30px; color:#aaa; font-size:13px; }
+    @media(max-width:600px){ .frow,.frow.three{ grid-template-columns:1fr; } .event-hd{ flex-direction:column; } }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-brand">AFRICON <span>AI FOR GROWTH</span></div>
+    <a href="/admin/dashboard.html" class="back-btn"><i class="fas fa-arrow-left"></i> Dashboard</a>
+  </nav>
+
+  <div class="main">
+    <div class="event-hd" id="event-hd">
+      <div class="event-hd-info">
+        <h2 id="ev-title">Loading…</h2>
+        <p id="ev-meta"></p>
+      </div>
+      <div id="ev-url-box" class="url-box" onclick="copyURL()" title="Click to copy public attendance link">
+        <i class="fas fa-link"></i>
+        <span id="ev-url-text"></span>
+        <i class="fas fa-copy"></i>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('attendees')">Attendees</div>
+      <div class="tab" onclick="switchTab('upload')">Upload CSV</div>
+      <div class="tab" onclick="switchTab('report')">Report</div>
+    </div>
+
+    <!-- ATTENDEES TAB -->
+    <div id="pane-attendees" class="pane active">
+      <div class="section">
+        <div class="section-hd"><h3>Add Single Attendee</h3></div>
+        <div class="section-body">
+          <div id="add-err" class="err"></div>
+          <div class="frow three">
+            <input id="add-name" placeholder="Full name">
+            <input id="add-phone" placeholder="Phone (optional)">
+            <input id="add-email" placeholder="Email (optional)">
+          </div>
+          <button class="btn-primary" id="add-btn" onclick="addSingle()">Add Attendee</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-hd">
+          <h3>Attendees (<span id="at-count">0</span>)</h3>
+          <small style="color:#999">Click a name to toggle attendance</small>
+        </div>
+        <div class="section-body">
+          <div class="search-box">
+            <input id="search" placeholder="&#x1F50D; Search…" oninput="renderAttendees()">
+          </div>
+          <div id="at-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UPLOAD TAB -->
+    <div id="pane-upload" class="pane">
+      <div class="section">
+        <div class="section-hd"><h3>Upload CSV</h3></div>
+        <div class="section-body">
+          <div id="up-err" class="err"></div>
+          <div id="up-ok"  class="ok"></div>
+          <p style="font-size:13px;color:#666;margin-bottom:14px;">
+            CSV must have a <strong>name</strong> column. Optionally include <strong>phone</strong> and <strong>email</strong> columns. First row = headers.
+          </p>
+          <div class="drop-zone" id="drop-zone" onclick="document.getElementById('csv-file').click()">
+            <i class="fas fa-file-csv"></i>
+            Click to choose a CSV file, or drag and drop here
+          </div>
+          <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="handleFile(this.files[0])">
+          <div id="preview" style="display:none; margin-top:14px;">
+            <p style="font-size:13px;color:#333;margin-bottom:10px;"><strong id="preview-count"></strong> rows detected</p>
+            <div id="preview-table" style="max-height:220px;overflow-y:auto;border:1px solid #eee;border-radius:6px;"></div>
+            <button class="btn-primary" id="up-btn" style="margin-top:12px" onclick="uploadCSV()">Upload All</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REPORT TAB -->
+    <div id="pane-report" class="pane">
+      <div class="section">
+        <div class="section-hd">
+          <h3>Attendance Report</h3>
+          <button class="export-btn" onclick="exportCSV()"><i class="fas fa-download"></i> Export CSV</button>
+        </div>
+        <div class="section-body">
+          <div class="stats-grid" id="report-stats"></div>
+          <div id="report-table-wrap"><div class="empty"><i class="fas fa-spinner fa-spin"></i></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/admin/login.html';
+    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+
+    const params  = new URLSearchParams(location.search);
+    const eventId = params.get('id');
+    if (!eventId) window.location.href = '/admin/dashboard.html';
+
+    let eventData = null;
+    let attendees  = [];
+    let csvRows    = [];
+
+    async function init() {
+      const res = await fetch(`/api/events/${eventId}`, { headers });
+      if (!res.ok) { window.location.href = '/admin/dashboard.html'; return; }
+      eventData = await res.json();
+      document.getElementById('ev-title').textContent = eventData.name;
+      document.getElementById('ev-meta').textContent  =
+        `Date: ${new Date(eventData.event_date).toLocaleDateString()}  ·  Slug: ${eventData.slug}`;
+      const publicURL = `${location.origin}/attend.html?event=${eventData.slug}`;
+      document.getElementById('ev-url-text').textContent = publicURL;
+      loadAttendees();
+    }
+
+    function copyURL() {
+      const url = `${location.origin}/attend.html?event=${eventData.slug}`;
+      navigator.clipboard.writeText(url).then(() => {
+        const el = document.getElementById('ev-url-box');
+        el.style.background = '#d4edda'; el.style.borderColor = '#28a745';
+        setTimeout(() => { el.style.background = ''; el.style.borderColor = ''; }, 1500);
+      });
+    }
+
+    async function loadAttendees() {
+      const res = await fetch(`/api/events/${eventId}/attendees`, { headers });
+      if (!res.ok) return;
+      attendees = await res.json();
+      renderAttendees();
+    }
+
+    function renderAttendees() {
+      const filter = document.getElementById('search').value.toLowerCase();
+      const list   = document.getElementById('at-list');
+      document.getElementById('at-count').textContent = attendees.length;
+
+      const filtered = attendees.filter(a =>
+        a.name.toLowerCase().includes(filter) ||
+        (a.phone || '').includes(filter) ||
+        (a.email || '').toLowerCase().includes(filter)
+      );
+
+      if (!filtered.length) { list.innerHTML = '<div class="empty">No results.</div>'; return; }
+
+      list.innerHTML = filtered.map(a => `
+        <div class="at-item ${a.attended ? 'attended' : 'not-attended'}" data-id="${a.id}" onclick="toggle(${a.id})">
+          <input type="checkbox" ${a.attended ? 'checked' : ''} onclick="event.stopPropagation(); toggle(${a.id})">
+          <div class="at-info">
+            <div class="at-name">${esc(a.name)}</div>
+            <div class="at-meta">${[a.phone, a.email].filter(Boolean).join(' · ') || '—'}</div>
+          </div>
+          <div class="at-icon"><i class="fas ${a.attended ? 'fa-check-circle' : 'fa-circle'}"></i></div>
+          <button class="btn-danger" onclick="event.stopPropagation(); removeAttendee(${a.id})" title="Remove"><i class="fas fa-times"></i></button>
+        </div>
+      `).join('');
+    }
+
+    async function toggle(id) {
+      const el = document.querySelector(`[data-id="${id}"]`);
+      if (el) el.classList.add('busy');
+      const res = await fetch(`/api/events/${eventId}/attendance`, {
+        method: 'PATCH', headers, body: JSON.stringify({ attendee_id: id }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        const idx = attendees.findIndex(a => a.id === id);
+        if (idx !== -1) attendees[idx] = updated;
+        renderAttendees();
+      }
+    }
+
+    async function removeAttendee(id) {
+      if (!confirm('Remove this attendee?')) return;
+      await fetch(`/api/events/${eventId}/attendees`, {
+        method: 'DELETE', headers, body: JSON.stringify({ attendee_id: id }),
+      });
+      attendees = attendees.filter(a => a.id !== id);
+      renderAttendees();
+    }
+
+    async function addSingle() {
+      const name  = document.getElementById('add-name').value.trim();
+      const phone = document.getElementById('add-phone').value.trim();
+      const email = document.getElementById('add-email').value.trim();
+      const btn   = document.getElementById('add-btn');
+      document.getElementById('add-err').style.display = 'none';
+      if (!name) { show('add-err', 'Name is required'); return; }
+      btn.disabled = true; btn.textContent = 'Adding…';
+      const res = await fetch(`/api/events/${eventId}/attendees`, {
+        method: 'POST', headers, body: JSON.stringify({ name, phone, email }),
+      });
+      const data = await res.json();
+      btn.disabled = false; btn.textContent = 'Add Attendee';
+      if (!res.ok) { show('add-err', data.error); return; }
+      attendees.push(data);
+      ['add-name','add-phone','add-email'].forEach(id => document.getElementById(id).value = '');
+      renderAttendees();
+    }
+
+    /* CSV */
+    const dz = document.getElementById('drop-zone');
+    dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+    dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
+
+    function handleFile(file) {
+      if (!file) return;
+      hide('up-err'); hide('up-ok');
+      const reader = new FileReader();
+      reader.onload = e => {
+        csvRows = parseCSV(e.target.result);
+        if (!csvRows.length) { show('up-err', 'No valid rows found. Ensure CSV has a "name" column.'); return; }
+        document.getElementById('preview-count').textContent = csvRows.length;
+        document.getElementById('preview-table').innerHTML = `<table>
+          <thead><tr><th>Name</th><th>Phone</th><th>Email</th></tr></thead>
+          <tbody>${csvRows.slice(0,10).map(r => `<tr>
+            <td>${esc(r.name)}</td><td>${esc(r.phone||'')}</td><td>${esc(r.email||'')}</td>
+          </tr>`).join('')}
+          ${csvRows.length>10?`<tr><td colspan="3" style="color:#999;font-style:italic">…and ${csvRows.length-10} more</td></tr>`:''}
+          </tbody></table>`;
+        document.getElementById('preview').style.display = 'block';
+      };
+      reader.readAsText(file);
+    }
+
+    function parseCSV(text) {
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length < 2) return [];
+      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,'').toLowerCase());
+      const nameIdx  = headers.indexOf('name');
+      if (nameIdx === -1) return [];
+      const phoneIdx = headers.indexOf('phone');
+      const emailIdx = headers.indexOf('email');
+      return lines.slice(1).map(line => {
+        const parts = line.split(',').map(v => v.trim().replace(/^"|"$/g,''));
+        const name  = parts[nameIdx] || '';
+        if (!name) return null;
+        return { name, phone: phoneIdx>=0 ? parts[phoneIdx]||'' : '', email: emailIdx>=0 ? parts[emailIdx]||'' : '' };
+      }).filter(Boolean);
+    }
+
+    async function uploadCSV() {
+      const btn = document.getElementById('up-btn');
+      hide('up-err'); hide('up-ok');
+      btn.disabled = true; btn.textContent = 'Uploading…';
+      const res = await fetch(`/api/events/${eventId}/attendees`, {
+        method: 'POST', headers, body: JSON.stringify({ attendees: csvRows }),
+      });
+      const data = await res.json();
+      btn.disabled = false; btn.textContent = 'Upload All';
+      if (!res.ok) { show('up-err', data.error); return; }
+      show('up-ok', `${data.length} attendees uploaded successfully.`);
+      document.getElementById('preview').style.display = 'none';
+      csvRows = [];
+      document.getElementById('csv-file').value = '';
+      loadAttendees();
+      switchTab('attendees');
+    }
+
+    /* REPORT */
+    async function loadReport() {
+      document.getElementById('report-table-wrap').innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i></div>';
+      const res = await fetch(`/api/events/${eventId}/report`, { headers });
+      if (!res.ok) return;
+      const { stats, attendees: list } = await res.json();
+      document.getElementById('report-stats').innerHTML = `
+        <div class="stat-card"><div class="stat-val">${stats.total}</div><div class="stat-lbl">Registered</div></div>
+        <div class="stat-card"><div class="stat-val">${stats.attended}</div><div class="stat-lbl">Attended</div></div>
+        <div class="stat-card"><div class="stat-val">${stats.not_attended}</div><div class="stat-lbl">Absent</div></div>
+        <div class="stat-card"><div class="stat-val">${stats.rate}%</div><div class="stat-lbl">Rate</div></div>
+      `;
+      document.getElementById('report-table-wrap').innerHTML = `<table>
+        <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Email</th><th>Status</th><th>Time</th></tr></thead>
+        <tbody>${list.map((a,i) => `<tr>
+          <td>${i+1}</td>
+          <td>${esc(a.name)}</td>
+          <td>${esc(a.phone||'—')}</td>
+          <td>${esc(a.email||'—')}</td>
+          <td><span class="badge ${a.attended?'badge-green':'badge-red'}">${a.attended?'Attended':'Absent'}</span></td>
+          <td>${a.attended_at ? new Date(a.attended_at).toLocaleString() : '—'}</td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+      window._reportData = { stats, list };
+    }
+
+    function exportCSV() {
+      if (!window._reportData) return;
+      const rows = [['Name','Phone','Email','Status','Time']];
+      window._reportData.list.forEach(a => rows.push([
+        a.name, a.phone||'', a.email||'',
+        a.attended?'Attended':'Absent',
+        a.attended_at ? new Date(a.attended_at).toLocaleString() : '',
+      ]));
+      const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+      a.download = `${eventData.slug}-report.csv`;
+      a.click();
+    }
+
+    function switchTab(name) {
+      const names = ['attendees','upload','report'];
+      document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i] === name));
+      document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+      document.getElementById('pane-' + name).classList.add('active');
+      if (name === 'report') loadReport();
+    }
+
+    function show(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block'; }
+    function hide(id) { document.getElementById(id).style.display = 'none'; }
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    init();
+  </script>
+</body>
+</html>
