@@ -42,6 +42,19 @@ module.exports = async (req, res) => {
       return res.status(201).json(rows[0]);
     }
 
+    if (req.method === 'PATCH') {
+      const payload = requireAuth(req, res);
+      if (!payload) return;
+      // Bulk mark all unattended participants as attended
+      const { rows } = await pool.query(
+        `UPDATE attendees SET attended = TRUE, attended_at = NOW()
+         WHERE event_id = $1 AND attended = FALSE
+         RETURNING *`,
+        [id]
+      );
+      return res.status(200).json(rows);
+    }
+
     if (req.method === 'DELETE') {
       const payload = requireAuth(req, res);
       if (!payload) return;

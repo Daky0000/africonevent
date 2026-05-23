@@ -209,7 +209,9 @@
     <div class="card">
       <div class="card-hd">
         <h3><i class="fas fa-list" style="color:#0052CC;margin-right:6px"></i>Participants <span id="at-count" style="font-size:12px;color:#999;font-weight:400"></span></h3>
-        <small style="color:#888;font-size:12px">Click a name to mark attendance</small>
+        <button class="btn btn-green" id="mark-all-btn" onclick="markAllAttended()" style="padding:6px 14px;font-size:12px">
+          <i class="fas fa-check-double"></i> Mark All Attended
+        </button>
       </div>
       <div class="card-body">
         <div id="day-tabs" class="day-tabs"></div>
@@ -559,6 +561,34 @@
     a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
     a.download = (eventData.slug||'event') + '-report.csv';
     a.click();
+  }
+
+  /* ── MARK ALL ── */
+  async function markAllAttended() {
+    const unattended = attendees.filter(a => !a.attended).length;
+    if (!unattended) { toast('Everyone is already marked as attended', 'info'); return; }
+    if (!confirm(`Mark all ${unattended} unattended participant${unattended > 1 ? 's' : ''} as attended?`)) return;
+
+    const btn = document.getElementById('mark-all-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Marking…';
+
+    try {
+      const r = await fetch('/api/events/' + eventId + '/attendees', { method: 'PATCH', headers: H });
+      if (!r.ok) throw new Error();
+      const updated = await r.json(); // array of newly-marked attendees
+      updated.forEach(u => {
+        const idx = attendees.findIndex(a => a.id === u.id);
+        if (idx !== -1) attendees[idx] = u;
+      });
+      renderList();
+      toast(`${updated.length} participant${updated.length !== 1 ? 's' : ''} marked as attended`, 'success');
+    } catch(ex) {
+      toast('Failed to mark all — please try again', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check-double"></i> Mark All Attended';
+    }
   }
 
   /* ── ACCESS CODE ── */
