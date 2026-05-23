@@ -187,16 +187,13 @@
 
   <div class="toast" id="toast"></div>
 
-  <!-- Congratulations modal -->
-  <div class="congrats-overlay" id="congrats-overlay" onclick="closeCongratsModal()">
-    <div class="congrats-card" onclick="event.stopPropagation()">
+  <!-- Congratulations modal — permanent, no close -->
+  <div class="congrats-overlay" id="congrats-overlay">
+    <div class="congrats-card">
       <div class="congrats-emoji">🎉</div>
       <div class="congrats-title">Attendance Confirmed!</div>
       <div class="congrats-name" id="congrats-name"></div>
       <div class="congrats-body">Your attendance has been successfully recorded.<br>Thank you for joining us today!</div>
-      <button class="congrats-btn" onclick="closeCongratsModal()">
-        <i class="fas fa-check"></i>&nbsp; Close
-      </button>
     </div>
   </div>
 
