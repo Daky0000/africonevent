@@ -184,8 +184,10 @@
       if (!res.ok) { window.location.href = '/admin/dashboard.html'; return; }
       eventData = await res.json();
       document.getElementById('ev-title').textContent = eventData.name;
-      document.getElementById('ev-meta').textContent  =
-        `Date: ${new Date(eventData.event_date).toLocaleDateString()}  ·  Slug: ${eventData.slug}`;
+      const start = new Date(eventData.start_date).toLocaleDateString();
+      const end   = eventData.end_date ? new Date(eventData.end_date).toLocaleDateString() : null;
+      const dateStr = end && end !== start ? `${start} – ${end}` : start;
+      document.getElementById('ev-meta').textContent = `Date: ${dateStr}  ·  Slug: ${eventData.slug}`;
       const publicURL = `${location.origin}/attend.html?event=${eventData.slug}`;
       document.getElementById('ev-url-text').textContent = publicURL;
       loadAttendees();

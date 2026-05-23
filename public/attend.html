@@ -119,7 +119,11 @@
         const ev = await evRes.json();
         eventId = ev.id;
         document.getElementById('ev-name').textContent = ev.name;
-        document.getElementById('ev-date').textContent = new Date(ev.event_date).toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+        const s = new Date(ev.start_date);
+        const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
+        const startStr = s.toLocaleDateString('en-GB', opts);
+        const endStr   = ev.end_date ? new Date(ev.end_date).toLocaleDateString('en-GB', opts) : null;
+        document.getElementById('ev-date').textContent = endStr && endStr !== startStr ? `${startStr} – ${endStr}` : startStr;
         document.title = `${ev.name} — Attendance`;
 
         const attRes = await fetch(`/api/events/${eventId}/attendees`);

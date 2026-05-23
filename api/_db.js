@@ -30,12 +30,23 @@ async function initDB() {
       id          SERIAL PRIMARY KEY,
       name        VARCHAR(255) NOT NULL,
       description TEXT,
-      event_date  DATE NOT NULL,
+      start_date  DATE NOT NULL,
+      end_date    DATE,
       slug        VARCHAR(100) NOT NULL UNIQUE,
       created_by  INTEGER REFERENCES admins(id),
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'events' AND column_name = 'event_date') THEN
+        ALTER TABLE events RENAME COLUMN event_date TO start_date;
+      END IF;
+    END $$;
+  `);
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS end_date DATE`);
 
   await pool.query(`
     DO $$

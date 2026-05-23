@@ -100,14 +100,60 @@
           <div id="ev-err" class="err"></div>
           <div id="ev-ok" class="ok"></div>
           <div class="frow">
-            <input id="ev-name" placeholder="Event name e.g. Africon Workshop May 2025">
-            <input id="ev-date" type="date">
+            <div>
+              <label style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;display:block;margin-bottom:5px">Event Name *</label>
+              <input id="ev-name" placeholder="e.g. Africon Workshop May 2025" oninput="autoSlug()">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;display:block;margin-bottom:5px">Description (optional)</label>
+              <input id="ev-desc" placeholder="Brief description">
+            </div>
           </div>
-          <div class="frow">
-            <input id="ev-slug" placeholder="URL slug e.g. africon-may-2025">
-            <input id="ev-desc" placeholder="Description (optional)">
+          <div class="frow three">
+            <div>
+              <label style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;display:block;margin-bottom:5px">Start Date *</label>
+              <input id="ev-start" type="date">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;display:block;margin-bottom:5px">End Date <span style="color:#aaa;font-weight:400">(optional)</span></label>
+              <input id="ev-end" type="date">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;display:block;margin-bottom:5px">URL Slug *</label>
+              <input id="ev-slug" placeholder="auto-generated">
+            </div>
           </div>
-          <button class="btn-primary" id="ev-btn" onclick="createEvent()">Create Event</button>
+          <!-- Repeat section -->
+          <div style="margin-bottom:14px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#444;font-weight:600">
+              <input type="checkbox" id="ev-repeat-chk" onchange="toggleRepeat()" style="width:16px;height:16px;cursor:pointer">
+              Repeat this event
+            </label>
+            <div id="ev-repeat-opts" style="display:none;margin-top:10px;padding:14px;background:#f8f9fa;border-radius:6px;border:1px solid #e0e0e0">
+              <div class="frow">
+                <div>
+                  <label style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;display:block;margin-bottom:5px">Frequency</label>
+                  <select id="ev-freq">
+                    <option value="weekly">Weekly (every 7 days)</option>
+                    <option value="biweekly">Bi-weekly (every 14 days)</option>
+                    <option value="monthly">Monthly (every 28 days)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;display:block;margin-bottom:5px">Number of occurrences</label>
+                  <select id="ev-count">
+                    <option value="2">2 times</option>
+                    <option value="3" selected>3 times</option>
+                    <option value="4">4 times</option>
+                    <option value="5">5 times</option>
+                    <option value="6">6 times</option>
+                  </select>
+                </div>
+              </div>
+              <p style="font-size:11px;color:#888;margin-top:6px"><i class="fas fa-info-circle"></i> Creates separate events named "Event Name (1st)", "Event Name (2nd)", etc. with auto-incremented slugs.</p>
+            </div>
+          </div>
+          <button class="btn-primary" id="ev-btn" onclick="createEvent()"><i class="fas fa-plus"></i> Create Event</button>
         </div>
       </div>
 
@@ -186,7 +232,7 @@
           const rate = e.total_attendees > 0 ? Math.round((e.attended_count / e.total_attendees) * 100) : 0;
           return `<tr>
             <td><strong>${esc(e.name)}</strong><br><small style="color:#999">${esc(e.slug)}</small></td>
-            <td>${new Date(e.event_date).toLocaleDateString()}</td>
+            <td>${fmtDate(e.start_date, e.end_date)}</td>
             <td>${e.total_attendees}</td>
             <td>${e.attended_count}</td>
             <td><span class="badge ${rate>=50?'badge-green':'badge-blue'}">${rate}%</span></td>
@@ -209,24 +255,70 @@
       document.getElementById('s-rate').textContent = rate + '%';
     }
 
+    function autoSlug() {
+      const name = document.getElementById('ev-name').value;
+      const slug = name.toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .trim()
+        .replace(/\s+/g, '-');
+      document.getElementById('ev-slug').value = slug;
+    }
+
+    function toggleRepeat() {
+      const on = document.getElementById('ev-repeat-chk').checked;
+      document.getElementById('ev-repeat-opts').style.display = on ? 'block' : 'none';
+    }
+
     async function createEvent() {
-      const name = document.getElementById('ev-name').value.trim();
-      const date = document.getElementById('ev-date').value;
-      const slug = document.getElementById('ev-slug').value.trim();
-      const desc = document.getElementById('ev-desc').value.trim();
-      const btn  = document.getElementById('ev-btn');
+      const name  = document.getElementById('ev-name').value.trim();
+      const start = document.getElementById('ev-start').value;
+      const end   = document.getElementById('ev-end').value;
+      const slug  = document.getElementById('ev-slug').value.trim();
+      const desc  = document.getElementById('ev-desc').value.trim();
+      const btn   = document.getElementById('ev-btn');
       hide('ev-err'); hide('ev-ok');
 
-      if (!name || !date || !slug) { show('ev-err', 'Name, date and slug are required'); return; }
+      if (!name)  { show('ev-err', 'Event name is required'); return; }
+      if (!start) { show('ev-err', 'Start date is required'); return; }
+      if (!slug)  { show('ev-err', 'URL slug is required — type the event name to auto-generate it'); return; }
+      if (end && end < start) { show('ev-err', 'End date cannot be before start date'); return; }
 
-      btn.disabled = true; btn.textContent = 'Creating…';
-      const res = await fetch('/api/events', { method:'POST', headers, body: JSON.stringify({name,description:desc,event_date:date,slug}) });
-      const data = await res.json();
-      btn.disabled = false; btn.textContent = 'Create Event';
-      if (!res.ok) { show('ev-err', data.error); return; }
-      show('ev-ok', `Event "${data.name}" created!`);
-      ['ev-name','ev-date','ev-slug','ev-desc'].forEach(id => document.getElementById(id).value = '');
-      loadEvents();
+      const useRepeat = document.getElementById('ev-repeat-chk').checked;
+      const repeat = useRepeat ? {
+        frequency: document.getElementById('ev-freq').value,
+        count: parseInt(document.getElementById('ev-count').value),
+      } : null;
+
+      btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating…';
+
+      try {
+        const res = await fetch('/api/events', {
+          method: 'POST', headers,
+          body: JSON.stringify({ name, description: desc, start_date: start, end_date: end || null, slug, repeat }),
+        });
+        const data = await res.json();
+        if (!res.ok) { show('ev-err', data.error || 'Failed to create event'); return; }
+
+        const created = Array.isArray(data) ? data : [data];
+        show('ev-ok', created.length === 1
+          ? `Event "${created[0].name}" created successfully!`
+          : `${created.length} recurring events created successfully!`);
+        ['ev-name','ev-start','ev-end','ev-slug','ev-desc'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('ev-repeat-chk').checked = false;
+        toggleRepeat();
+        loadEvents();
+      } catch (e) {
+        show('ev-err', 'Network error — please try again');
+      } finally {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus"></i> Create Event';
+      }
+    }
+
+    function fmtDate(start, end) {
+      const s = new Date(start).toLocaleDateString();
+      if (!end) return s;
+      const e = new Date(end).toLocaleDateString();
+      return s === e ? s : `${s} – ${e}`;
     }
 
     async function deleteEvent(id, name) {
