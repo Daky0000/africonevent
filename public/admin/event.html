@@ -91,6 +91,11 @@
     .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
     .badge-green{background:#d4edda;color:#155724}
     .badge-red{background:#f8d7da;color:#721c24}
+    /* Day tabs */
+    .day-tabs{display:none;flex-wrap:wrap;gap:6px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #eee}
+    .day-tab{padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;background:#f0f2f5;color:#555;border:2px solid transparent;transition:all .15s;white-space:nowrap}
+    .day-tab:hover{background:#e0ebff;color:#0052CC}
+    .day-tab.active{background:#0052CC;color:white;border-color:#0052CC}
     /* Access code row */
     .code-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid #f0f0f0}
     .code-lbl{font-size:11px;font-weight:700;text-transform:uppercase;color:#888}
@@ -207,6 +212,7 @@
         <small style="color:#888;font-size:12px">Click a name to mark attendance</small>
       </div>
       <div class="card-body">
+        <div id="day-tabs" class="day-tabs"></div>
         <div class="search-wrap">
           <i class="fas fa-search"></i>
           <input id="search" placeholder="Search by name, phone or email…" oninput="renderList()">
@@ -242,9 +248,10 @@
   const eventId = params.get('id');
   if (!eventId) window.location.replace('/admin/dashboard.html');
 
-  let eventData = null;
-  let attendees = [];
-  let csvRows   = [];
+  let eventData       = null;
+  let attendees       = [];
+  let csvRows         = [];
+  let activeDayFilter = null; // null = All, or "YYYY-MM-DD" for a specific day
 
   /* ── INIT ── */
   async function init() {
@@ -265,6 +272,7 @@
       document.getElementById('ev-code').textContent = eventData.access_code || '——';
       document.title = eventData.name + ' — Africon';
 
+      renderDayTabs();
       loadAttendees();
     } catch(ex) { toast('Failed to load event', 'error'); }
   }
@@ -280,6 +288,53 @@
     document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
     document.getElementById('pane-' + name).classList.add('active');
     if (name === 'report') loadReport();
+  }
+
+  /* ── DAY TABS ── */
+  function renderDayTabs() {
+    const startStr = eventData.start_date.slice(0, 10);
+    const endStr   = eventData.end_date ? eventData.end_date.slice(0, 10) : startStr;
+    if (startStr === endStr) return; // single-day event — no tabs needed
+
+    const start = new Date(startStr + 'T00:00:00');
+    const end   = new Date(endStr   + 'T00:00:00');
+    const total = Math.round((end - start) / 86400000) + 1;
+    if (total <= 1) return;
+
+    const days = [];
+    for (let i = 0; i < total; i++) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      days.push({
+        day:     i + 1,
+        dateStr: d.toLocaleDateString('en-CA'),
+        label:   d.toLocaleDateString('en-GB', { day:'numeric', month:'short' }),
+      });
+    }
+
+    const container = document.getElementById('day-tabs');
+    container.innerHTML =
+      `<div class="day-tab active" data-date="all" onclick="setDayFilter(null)">All Days</div>` +
+      days.map(d =>
+        `<div class="day-tab" data-date="${d.dateStr}" onclick="setDayFilter('${d.dateStr}')">` +
+        `Day ${d.day} <span style="font-weight:400;font-size:11px;opacity:.8">${d.label}</span></div>`
+      ).join('');
+    container.style.display = 'flex';
+  }
+
+  function setDayFilter(date) {
+    activeDayFilter = date;
+    document.querySelectorAll('.day-tab').forEach(t =>
+      t.classList.toggle('active', date === null ? t.dataset.date === 'all' : t.dataset.date === date)
+    );
+    renderList();
+  }
+
+  // Returns whether attendee counts as "attended" for the currently active day tab
+  function attendedOnDay(a) {
+    if (!activeDayFilter) return a.attended;
+    if (!a.attended || !a.attended_at) return false;
+    return new Date(a.attended_at).toLocaleDateString('en-CA') === activeDayFilter;
   }
 
   /* ── ADD PANELS ── */
@@ -313,8 +368,9 @@
   function renderList() {
     const filter = document.getElementById('search').value.toLowerCase();
     const list   = document.getElementById('at-list');
+    const attendedCount = attendees.filter(a => attendedOnDay(a)).length;
     document.getElementById('at-count').textContent =
-      '(' + attendees.length + ' registered, ' + attendees.filter(a=>a.attended).length + ' attended)';
+      `(${attendees.length} registered, ${attendedCount} attended${activeDayFilter ? ' this day' : ''})`;
 
     const filtered = attendees.filter(a =>
       a.name.toLowerCase().includes(filter) ||
@@ -327,17 +383,18 @@
       return;
     }
 
-    list.innerHTML = filtered.map(a => `
-      <div class="at-item ${a.attended?'attended':'absent'}" data-id="${a.id}" onclick="toggle(${a.id})">
-        <input type="checkbox" class="at-check" ${a.attended?'checked':''} onclick="event.stopPropagation();toggle(${a.id})">
+    list.innerHTML = filtered.map(a => {
+      const on = attendedOnDay(a);
+      return `<div class="at-item ${on?'attended':'absent'}" data-id="${a.id}" onclick="toggle(${a.id})">
+        <input type="checkbox" class="at-check" ${on?'checked':''} onclick="event.stopPropagation();toggle(${a.id})">
         <div class="at-info">
           <div class="at-name">${esc(a.name)}</div>
           <div class="at-sub">${[a.phone,a.email].filter(Boolean).join(' · ')||'—'}</div>
         </div>
-        <div class="at-icon"><i class="fas ${a.attended?'fa-check-circle':'fa-circle'}"></i></div>
+        <div class="at-icon"><i class="fas ${on?'fa-check-circle':'fa-circle'}"></i></div>
         <button class="at-del" onclick="event.stopPropagation();removeAt(${a.id})" title="Remove"><i class="fas fa-times"></i></button>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   }
 
   async function toggle(id) {
