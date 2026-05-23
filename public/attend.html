@@ -96,6 +96,7 @@
     .not-attended .at-status { color:#ddd; }
     .state-msg { text-align:center; padding:40px 20px; color:#aaa; font-size:14px; }
     .state-msg i { font-size:28px; display:block; margin-bottom:10px; }
+    .at-item.attended .at-sub { color:#2d8a50; }
     .toast {
       position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
       background:#222; color:white; padding:10px 20px; border-radius:20px;
@@ -103,6 +104,34 @@
     }
     .toast.show { opacity:1; }
     .privacy { color:rgba(255,255,255,.6); font-size:11px; text-align:center; margin-top:16px; line-height:1.5; }
+
+    /* Congratulations modal */
+    .congrats-overlay {
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,.55); z-index:1000;
+      align-items:center; justify-content:center; padding:20px;
+    }
+    .congrats-overlay.open { display:flex; }
+    .congrats-card {
+      background:white; border-radius:20px; padding:40px 28px 32px;
+      max-width:360px; width:100%; text-align:center;
+      box-shadow:0 24px 64px rgba(0,0,0,.3);
+      animation: popIn .3s cubic-bezier(.175,.885,.32,1.275);
+    }
+    @keyframes popIn {
+      from { transform:scale(.7); opacity:0; }
+      to   { transform:scale(1);  opacity:1; }
+    }
+    .congrats-emoji { font-size:62px; line-height:1; margin-bottom:16px; }
+    .congrats-title { font-size:22px; font-weight:800; color:#1a7a3f; margin-bottom:6px; }
+    .congrats-name  { font-size:16px; font-weight:700; color:#111; margin-bottom:10px; }
+    .congrats-body  { font-size:13px; color:#777; line-height:1.7; margin-bottom:28px; }
+    .congrats-btn {
+      width:100%; padding:14px; background:#0052CC; color:white;
+      border:none; border-radius:10px; font-size:15px; font-weight:700;
+      cursor:pointer; transition:background .15s;
+    }
+    .congrats-btn:hover { background:#003d99; }
   </style>
 </head>
 <body>
@@ -157,6 +186,19 @@
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <!-- Congratulations modal -->
+  <div class="congrats-overlay" id="congrats-overlay" onclick="closeCongratsModal()">
+    <div class="congrats-card" onclick="event.stopPropagation()">
+      <div class="congrats-emoji">🎉</div>
+      <div class="congrats-title">Attendance Confirmed!</div>
+      <div class="congrats-name" id="congrats-name"></div>
+      <div class="congrats-body">Your attendance has been successfully recorded.<br>Thank you for joining us today!</div>
+      <button class="congrats-btn" onclick="closeCongratsModal()">
+        <i class="fas fa-check"></i>&nbsp; Close
+      </button>
+    </div>
+  </div>
 
   <script>
     const slug = new URLSearchParams(location.search).get('event');
@@ -273,16 +315,16 @@
       }
 
       list.innerHTML = filtered.map(a => {
-        const initials = a.name.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
-        const sub = [a.phone, a.email].filter(Boolean).join(' · ');
-        const isAttended = a.attended;
-        return `<div class="at-item ${isAttended ? 'attended' : 'not-attended clickable'}" data-id="${a.id}" ${isAttended ? '' : `onclick="toggle(${a.id})"`}>
+        const initials   = a.name.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
+        const contactSub = [a.phone, a.email].filter(Boolean).join(' · ');
+        const sub        = a.attended ? '✓ Attendance recorded' : (contactSub || '');
+        return `<div class="at-item ${a.attended ? 'attended' : 'not-attended clickable'}" data-id="${a.id}" ${a.attended ? '' : `onclick="toggle(${a.id})"`}>
           <div class="avatar">${esc(initials)}</div>
           <div class="at-info">
             <div class="at-name">${esc(a.name)}</div>
-            ${sub ? `<div class="at-sub">${esc(sub)}</div>` : ''}
+            <div class="at-sub">${esc(sub)}</div>
           </div>
-          <div class="at-status"><i class="fas ${isAttended ? 'fa-check-circle' : 'fa-circle'}"></i></div>
+          <div class="at-status"><i class="fas ${a.attended ? 'fa-check-circle' : 'fa-circle'}"></i></div>
         </div>`;
       }).join('');
     }
@@ -306,7 +348,7 @@
         if (idx !== -1) attendees[idx] = updated;
         render();
         updateStats();
-        toast('&#x2705; Attendance marked!');
+        showCongratsModal(updated.name);
       } catch {
         toast('Failed — try again');
         if (el) el.classList.remove('busy');
@@ -329,14 +371,29 @@
     }
 
     function getDayInfo(startDate, endDate) {
-      const start   = new Date(startDate + 'T00:00:00');
-      const end     = endDate ? new Date(endDate + 'T00:00:00') : start;
-      const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+      // Slice to "YYYY-MM-DD" in case DB returns a datetime string
+      const startStr = startDate.slice(0, 10);
+      const endStr   = endDate ? endDate.slice(0, 10) : startStr;
+      const todayStr = new Date().toLocaleDateString('en-CA'); // "YYYY-MM-DD" local
+
+      if (todayStr < startStr || todayStr > endStr) return null;
+
+      // Math.round guards against DST hour shifts
+      const start   = new Date(startStr + 'T00:00:00');
+      const end     = new Date(endStr   + 'T00:00:00');
       const today   = new Date(todayStr + 'T00:00:00');
-      const total   = Math.floor((end - start) / 86400000) + 1;
-      const current = Math.floor((today - start) / 86400000) + 1;
-      if (current < 1 || current > total) return null;
+      const total   = Math.round((end   - start) / 86400000) + 1;
+      const current = Math.round((today - start) / 86400000) + 1;
       return { day: current, total };
+    }
+
+    function showCongratsModal(name) {
+      document.getElementById('congrats-name').textContent = name;
+      document.getElementById('congrats-overlay').classList.add('open');
+    }
+
+    function closeCongratsModal() {
+      document.getElementById('congrats-overlay').classList.remove('open');
     }
 
     function esc(s) {

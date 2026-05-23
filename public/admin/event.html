@@ -555,13 +555,15 @@
 
   /* ── HELPERS ── */
   function getDayInfo(startDate, endDate) {
-    const start   = new Date(startDate + 'T00:00:00');
-    const end     = endDate ? new Date(endDate + 'T00:00:00') : start;
+    const startStr = startDate.slice(0, 10);
+    const endStr   = endDate ? endDate.slice(0, 10) : startStr;
     const todayStr = new Date().toLocaleDateString('en-CA');
+    if (todayStr < startStr || todayStr > endStr) return null;
+    const start   = new Date(startStr + 'T00:00:00');
+    const end     = new Date(endStr   + 'T00:00:00');
     const today   = new Date(todayStr + 'T00:00:00');
-    const total   = Math.floor((end - start) / 86400000) + 1;
-    const current = Math.floor((today - start) / 86400000) + 1;
-    if (current < 1 || current > total) return null;
+    const total   = Math.round((end   - start) / 86400000) + 1;
+    const current = Math.round((today - start) / 86400000) + 1;
     return { day: current, total };
   }
 
