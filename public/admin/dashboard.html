@@ -141,7 +141,7 @@
         </div>
 
         <div style="margin-top:18px;display:flex;align-items:center;gap:12px">
-          <button class="btn btn-blue" id="ev-btn" onclick="createEvent()">
+          <button class="btn btn-blue" id="ev-btn" onclick="submitEvent()">
             <i class="fas fa-plus"></i> Create Event
           </button>
           <span id="ev-status" style="font-size:13px;color:#666"></span>
@@ -276,7 +276,7 @@
       document.getElementById('ev-repeat').checked ? 'block' : 'none';
   }
 
-  async function createEvent() {
+  async function submitEvent() {
     const name  = document.getElementById('ev-name').value.trim();
     const start = document.getElementById('ev-start').value;
     const end   = document.getElementById('ev-end').value;
