@@ -30,4 +30,4 @@ function requireAuth(req, res) {
   return payload;
 }
 
-module.exports = { signToken, requireAuth };
+module.exports = { signToken, verifyToken, getToken, requireAuth };

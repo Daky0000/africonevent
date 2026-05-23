@@ -48,6 +48,14 @@ async function initDB() {
   `);
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS end_date DATE`);
 
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS access_code VARCHAR(20)`);
+  // Backfill any existing events that don't have a code yet
+  await pool.query(`
+    UPDATE events
+    SET access_code = UPPER(SUBSTRING(MD5(id::TEXT || random()::TEXT), 1, 6))
+    WHERE access_code IS NULL
+  `);
+
   await pool.query(`
     DO $$
     BEGIN

@@ -18,7 +18,45 @@
     .brand-sub { font-size:12px; color:#6FCF97; letter-spacing:1px; margin-top:2px; }
     .event-name { font-size:22px; font-weight:600; margin-top:14px; }
     .event-date { font-size:13px; opacity:.8; margin-top:4px; }
+    .day-badge {
+      display:inline-block; margin-top:10px;
+      background:rgba(255,255,255,.22); color:#fff;
+      border:2px solid rgba(255,255,255,.5);
+      border-radius:20px; padding:5px 18px;
+      font-size:14px; font-weight:700; letter-spacing:.5px;
+    }
     .card { background:white; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,.15); padding:24px; }
+
+    /* Code gate */
+    .gate-icon { font-size:48px; margin-bottom:16px; }
+    .gate-title { font-size:20px; font-weight:700; color:#111; margin-bottom:8px; }
+    .gate-sub { font-size:13px; color:#666; margin-bottom:28px; line-height:1.6; }
+    .code-input-wrap { display:flex; flex-direction:column; align-items:center; gap:12px; }
+    #code-input {
+      text-align:center; font-size:24px; letter-spacing:6px; font-family:monospace;
+      font-weight:700; width:100%; max-width:220px; padding:14px 12px;
+      border:2px solid #ddd; border-radius:10px; text-transform:uppercase;
+      transition:border-color .15s;
+    }
+    #code-input:focus { outline:none; border-color:#0052CC; box-shadow:0 0 0 3px rgba(0,82,204,.1); }
+    #code-input.shake { animation: shake .35s; }
+    @keyframes shake {
+      0%,100%{transform:translateX(0)}
+      20%{transform:translateX(-8px)}
+      40%{transform:translateX(8px)}
+      60%{transform:translateX(-6px)}
+      80%{transform:translateX(6px)}
+    }
+    #code-error { color:#dc3545; font-size:13px; min-height:18px; }
+    #verify-btn {
+      width:100%; max-width:220px; padding:13px;
+      background:#0052CC; color:white; border:none; border-radius:8px;
+      font-size:15px; font-weight:700; cursor:pointer; transition:background .15s;
+    }
+    #verify-btn:hover { background:#003d99; }
+    #verify-btn:disabled { background:#999; cursor:not-allowed; }
+
+    /* Attendance view */
     .instructions { font-size:13px; color:#666; text-align:center; margin-bottom:16px; line-height:1.5; }
     .search-wrap { position:relative; margin-bottom:16px; }
     .search-wrap input {
@@ -36,9 +74,10 @@
     .at-item {
       display:flex; align-items:center; gap:12px;
       padding:12px 14px; border-radius:8px; border:2px solid #eee;
-      cursor:pointer; transition:all .15s; background:white; user-select:none;
+      transition:all .15s; background:white; user-select:none;
     }
-    .at-item:hover { border-color:#0052CC; box-shadow:0 2px 8px rgba(0,82,204,.1); }
+    .at-item.clickable { cursor:pointer; }
+    .at-item.clickable:hover { border-color:#0052CC; box-shadow:0 2px 8px rgba(0,82,204,.1); }
     .at-item.attended { background:#d4edda; border-color:#28a745; }
     .at-item.not-attended { background:#fff8f8; border-color:#eee; }
     .at-item.busy { opacity:.5; pointer-events:none; }
@@ -73,24 +112,44 @@
       <div class="brand-sub">AI FOR GROWTH</div>
       <div class="event-name" id="ev-name">Loading…</div>
       <div class="event-date" id="ev-date"></div>
+      <div id="day-badge" class="day-badge" style="display:none"></div>
     </div>
 
-    <div class="card">
-      <p class="instructions">Find your name below and tap it to mark your attendance.</p>
-
-      <div class="stats-row">
-        <div class="stat-pill"><div class="stat-pill-val" id="s-attended">0</div><div class="stat-pill-lbl">Attended</div></div>
-        <div class="stat-pill"><div class="stat-pill-val" id="s-total">0</div><div class="stat-pill-lbl">Registered</div></div>
-        <div class="stat-pill"><div class="stat-pill-val" id="s-rate">0%</div><div class="stat-pill-lbl">Rate</div></div>
+    <!-- Code gate (shown first) -->
+    <div id="code-gate" class="card" style="text-align:center; padding:36px 24px;">
+      <div class="gate-icon">🔒</div>
+      <div class="gate-title">Enter Access Code</div>
+      <div class="gate-sub">This event requires an access code.<br>Please enter the code provided by the organiser.</div>
+      <div class="code-input-wrap">
+        <input type="text" id="code-input" placeholder="e.g. ABC123" maxlength="20"
+               oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+               onkeydown="if(event.key==='Enter')verifyCode()">
+        <div id="code-error"></div>
+        <button id="verify-btn" onclick="verifyCode()">
+          <i class="fas fa-unlock"></i> Enter
+        </button>
       </div>
+    </div>
 
-      <div class="search-wrap">
-        <i class="fas fa-search"></i>
-        <input type="text" id="search" placeholder="Search your name…" oninput="render()">
-      </div>
+    <!-- Attendance view (hidden until code verified) -->
+    <div id="attend-view" style="display:none;">
+      <div class="card">
+        <p class="instructions">Find your name below and tap it to mark your attendance.</p>
 
-      <div class="attendee-list" id="list">
-        <div class="state-msg"><i class="fas fa-spinner fa-spin"></i>Loading attendees…</div>
+        <div class="stats-row">
+          <div class="stat-pill"><div class="stat-pill-val" id="s-attended">0</div><div class="stat-pill-lbl">Attended</div></div>
+          <div class="stat-pill"><div class="stat-pill-val" id="s-total">0</div><div class="stat-pill-lbl">Registered</div></div>
+          <div class="stat-pill"><div class="stat-pill-val" id="s-rate">0%</div><div class="stat-pill-lbl">Rate</div></div>
+        </div>
+
+        <div class="search-wrap">
+          <i class="fas fa-search"></i>
+          <input type="text" id="search" placeholder="Search your name…" oninput="render()">
+        </div>
+
+        <div class="attendee-list" id="list">
+          <div class="state-msg"><i class="fas fa-spinner fa-spin"></i>Loading attendees…</div>
+        </div>
       </div>
     </div>
 
@@ -101,31 +160,96 @@
 
   <script>
     const slug = new URLSearchParams(location.search).get('event');
-    if (!slug) {
-      document.getElementById('ev-name').textContent = 'Invalid link';
-    }
+    if (!slug) document.getElementById('ev-name').textContent = 'Invalid link';
 
-    let eventId   = null;
-    let attendees = [];
+    let eventId      = null;
+    let attendees    = [];
+    let verifiedCode = null;
 
     async function init() {
       try {
         const evRes = await fetch(`/api/events/${slug}`);
         if (!evRes.ok) {
           document.getElementById('ev-name').textContent = 'Event not found';
-          document.getElementById('list').innerHTML = '<div class="state-msg"><i class="fas fa-exclamation-triangle" style="color:#dc3545"></i>This event link is invalid or expired.</div>';
+          document.getElementById('code-gate').innerHTML = '<div class="state-msg"><i class="fas fa-exclamation-triangle" style="color:#dc3545"></i>This event link is invalid or expired.</div>';
           return;
         }
         const ev = await evRes.json();
         eventId = ev.id;
         document.getElementById('ev-name').textContent = ev.name;
-        const s = new Date(ev.start_date);
+        const s    = new Date(ev.start_date);
         const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
         const startStr = s.toLocaleDateString('en-GB', opts);
         const endStr   = ev.end_date ? new Date(ev.end_date).toLocaleDateString('en-GB', opts) : null;
         document.getElementById('ev-date').textContent = endStr && endStr !== startStr ? `${startStr} – ${endStr}` : startStr;
         document.title = `${ev.name} — Attendance`;
 
+        // Show which day of the event it is today
+        const dayInfo = getDayInfo(ev.start_date, ev.end_date);
+        if (dayInfo) {
+          const badge = document.getElementById('day-badge');
+          badge.textContent = dayInfo.total > 1 ? `Day ${dayInfo.day} of ${dayInfo.total}` : 'Day 1';
+          badge.style.display = 'inline-block';
+        }
+
+        // If we already verified the code this session, skip the gate
+        const saved = sessionStorage.getItem(`africon_code_${eventId}`);
+        if (saved) {
+          verifiedCode = saved;
+          showAttendView();
+        }
+      } catch (e) {
+        document.getElementById('code-gate').innerHTML = '<div class="state-msg"><i class="fas fa-exclamation-triangle" style="color:#dc3545"></i>Failed to load. Please refresh.</div>';
+      }
+    }
+
+    async function verifyCode() {
+      if (!eventId) return;
+      const code = document.getElementById('code-input').value.trim();
+      if (!code) { showCodeError('Please enter the access code.'); return; }
+
+      const btn = document.getElementById('verify-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking…';
+
+      try {
+        const res = await fetch(`/api/events/${eventId}/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+        if (res.ok) {
+          verifiedCode = code;
+          sessionStorage.setItem(`africon_code_${eventId}`, code);
+          showAttendView();
+        } else {
+          showCodeError('Incorrect code. Please try again.');
+          const inp = document.getElementById('code-input');
+          inp.value = '';
+          inp.classList.add('shake');
+          inp.addEventListener('animationend', () => inp.classList.remove('shake'), { once: true });
+          inp.focus();
+        }
+      } catch {
+        showCodeError('Network error. Please try again.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-unlock"></i> Enter';
+      }
+    }
+
+    function showCodeError(msg) {
+      document.getElementById('code-error').textContent = msg;
+    }
+
+    function showAttendView() {
+      document.getElementById('code-gate').style.display = 'none';
+      document.getElementById('attend-view').style.display = 'block';
+      loadAttendees();
+    }
+
+    async function loadAttendees() {
+      try {
         const attRes = await fetch(`/api/events/${eventId}/attendees`);
         attendees = await attRes.json();
         render();
@@ -151,18 +275,22 @@
       list.innerHTML = filtered.map(a => {
         const initials = a.name.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
         const sub = [a.phone, a.email].filter(Boolean).join(' · ');
-        return `<div class="at-item ${a.attended ? 'attended' : 'not-attended'}" data-id="${a.id}" onclick="toggle(${a.id})">
-          <div class="avatar">${initials}</div>
+        const isAttended = a.attended;
+        return `<div class="at-item ${isAttended ? 'attended' : 'not-attended clickable'}" data-id="${a.id}" ${isAttended ? '' : `onclick="toggle(${a.id})"`}>
+          <div class="avatar">${esc(initials)}</div>
           <div class="at-info">
             <div class="at-name">${esc(a.name)}</div>
             ${sub ? `<div class="at-sub">${esc(sub)}</div>` : ''}
           </div>
-          <div class="at-status"><i class="fas ${a.attended ? 'fa-check-circle' : 'fa-circle'}"></i></div>
+          <div class="at-status"><i class="fas ${isAttended ? 'fa-check-circle' : 'fa-circle'}"></i></div>
         </div>`;
       }).join('');
     }
 
     async function toggle(id) {
+      const a = attendees.find(x => x.id === id);
+      if (!a || a.attended) return; // already marked — no action
+
       const el = document.querySelector(`[data-id="${id}"]`);
       if (el) el.classList.add('busy');
 
@@ -170,15 +298,15 @@
         const res = await fetch(`/api/events/${eventId}/attendance`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ attendee_id: id }),
+          body: JSON.stringify({ attendee_id: id, code: verifiedCode }),
         });
         if (!res.ok) throw new Error();
         const updated = await res.json();
-        const idx = attendees.findIndex(a => a.id === id);
+        const idx = attendees.findIndex(x => x.id === id);
         if (idx !== -1) attendees[idx] = updated;
         render();
         updateStats();
-        toast(updated.attended ? '&#x2705; Attendance marked!' : 'Attendance removed');
+        toast('&#x2705; Attendance marked!');
       } catch {
         toast('Failed — try again');
         if (el) el.classList.remove('busy');
@@ -198,6 +326,17 @@
       const el = document.getElementById('toast');
       el.innerHTML = msg; el.classList.add('show');
       setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+    function getDayInfo(startDate, endDate) {
+      const start   = new Date(startDate + 'T00:00:00');
+      const end     = endDate ? new Date(endDate + 'T00:00:00') : start;
+      const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+      const today   = new Date(todayStr + 'T00:00:00');
+      const total   = Math.floor((end - start) / 86400000) + 1;
+      const current = Math.floor((today - start) / 86400000) + 1;
+      if (current < 1 || current > total) return null;
+      return { day: current, total };
     }
 
     function esc(s) {

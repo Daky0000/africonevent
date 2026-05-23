@@ -33,8 +33,8 @@ module.exports = async (req, res) => {
       // Single event (no repeat)
       if (!repeat || repeat.count <= 1) {
         const { rows } = await pool.query(
-          'INSERT INTO events (name, description, start_date, end_date, slug, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-          [name, description || null, start_date, end_date || null, baseSlug, payload.id]
+          'INSERT INTO events (name, description, start_date, end_date, slug, created_by, access_code) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
+          [name, description || null, start_date, end_date || null, baseSlug, payload.id, generateCode()]
         );
         return res.status(201).json([rows[0]]);
       }
@@ -52,8 +52,8 @@ module.exports = async (req, res) => {
         const eventName = `${name} (${ordinal(i + 1)})`;
         try {
           const { rows } = await pool.query(
-            'INSERT INTO events (name, description, start_date, end_date, slug, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-            [eventName, description || null, sDate, eDate, eventSlug, payload.id]
+            'INSERT INTO events (name, description, start_date, end_date, slug, created_by, access_code) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
+            [eventName, description || null, sDate, eDate, eventSlug, payload.id, generateCode()]
           );
           created.push(rows[0]);
         } catch (e) {
@@ -69,6 +69,13 @@ module.exports = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+function generateCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
 
 function addDays(dateStr, days) {
   const d = new Date(dateStr);

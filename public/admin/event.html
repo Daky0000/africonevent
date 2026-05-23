@@ -64,6 +64,7 @@
     .at-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #eee;border-radius:6px;margin-bottom:6px;cursor:pointer;transition:all .15s;background:#fff}
     .at-item:hover{border-color:#0052CC;background:#f5f8ff}
     .at-item.attended{background:#d4edda;border-color:#28a745}
+    .at-item.attended:hover{background:#c3e6cb}
     .at-item.absent{background:#fff8f8;border-color:#eee}
     .at-item.busy{opacity:.5;pointer-events:none}
     .at-check{width:18px;height:18px;flex-shrink:0}
@@ -90,6 +91,16 @@
     .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
     .badge-green{background:#d4edda;color:#155724}
     .badge-red{background:#f8d7da;color:#721c24}
+    /* Access code row */
+    .code-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid #f0f0f0}
+    .code-lbl{font-size:11px;font-weight:700;text-transform:uppercase;color:#888}
+    .code-display{font-family:monospace;font-size:18px;font-weight:800;letter-spacing:4px;color:#0052CC;background:#f0f4ff;padding:5px 16px;border-radius:8px;cursor:pointer;border:2px solid transparent;transition:border-color .15s}
+    .code-display:hover{border-color:#0052CC}
+    .btn-sm{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1px solid #ddd;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:#444;transition:all .15s}
+    .btn-sm:hover{background:#f0f4ff;border-color:#0052CC;color:#0052CC}
+    .custom-code-wrap{display:none;align-items:center;gap:8px;width:100%;margin-top:4px}
+    .custom-code-wrap input{max-width:160px;padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:14px;font-family:monospace;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+    .custom-code-wrap input:focus{outline:none;border-color:#0052CC}
     table{width:100%;border-collapse:collapse;font-size:13px}
     th{text-align:left;padding:8px 12px;background:#f8f9fa;color:#555;font-weight:600;font-size:11px;text-transform:uppercase;border-bottom:1px solid #eee}
     td{padding:8px 12px;border-bottom:1px solid #f0f0f0;color:#333;vertical-align:middle}
@@ -114,6 +125,20 @@
         <i class="fas fa-link"></i>
         <span id="ev-url-label">Public Link</span>
         <i class="fas fa-copy"></i>
+      </div>
+    </div>
+    <!-- Access code row -->
+    <div class="code-row">
+      <span class="code-lbl">Access Code</span>
+      <span class="code-display" id="ev-code" title="Click to copy code" onclick="copyCode()">------</span>
+      <button class="btn-sm" onclick="regenerateCode()" title="Auto-generate a new code"><i class="fas fa-sync-alt"></i> Regenerate</button>
+      <button class="btn-sm" id="custom-toggle-btn" onclick="toggleCustomCode()"><i class="fas fa-edit"></i> Custom</button>
+      <div class="custom-code-wrap" id="custom-code-wrap">
+        <input id="custom-code-input" maxlength="12" placeholder="e.g. CONF24"
+               oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+               onkeydown="if(event.key==='Enter')saveCustomCode()">
+        <button class="btn btn-blue" style="padding:6px 14px;font-size:12px" onclick="saveCustomCode()">Save</button>
+        <button class="btn" style="padding:6px 12px;font-size:12px;background:#eee;color:#555" onclick="toggleCustomCode()">Cancel</button>
       </div>
     </div>
   </div>
@@ -231,10 +256,13 @@
       document.getElementById('ev-title').textContent = eventData.name;
       const s   = new Date(eventData.start_date).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
       const e   = eventData.end_date ? new Date(eventData.end_date).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) : null;
+      const dayInfo = getDayInfo(eventData.start_date, eventData.end_date);
+      const dayStr  = dayInfo ? (dayInfo.total > 1 ? `  ·  Day ${dayInfo.day} of ${dayInfo.total}` : '  ·  Day 1') : '';
       document.getElementById('ev-meta').textContent =
-        (e && e !== s ? s + ' – ' + e : s) + '  ·  Slug: ' + eventData.slug;
+        (e && e !== s ? s + ' – ' + e : s) + '  ·  Slug: ' + eventData.slug + dayStr;
       document.getElementById('ev-url-label').textContent =
         location.origin + '/attend.html?event=' + eventData.slug;
+      document.getElementById('ev-code').textContent = eventData.access_code || '——';
       document.title = eventData.name + ' — Africon';
 
       loadAttendees();
@@ -476,7 +504,67 @@
     a.click();
   }
 
+  /* ── ACCESS CODE ── */
+  function copyCode() {
+    const code = document.getElementById('ev-code').textContent;
+    if (!code || code === '——') return;
+    navigator.clipboard.writeText(code).then(() => toast('Access code copied!', 'success'));
+  }
+
+  async function regenerateCode() {
+    if (!confirm('Generate a new access code? The old code will stop working immediately.')) return;
+    try {
+      const r = await fetch('/api/events/' + eventId, {
+        method: 'PATCH', headers: H, body: JSON.stringify({ regenerate_code: true })
+      });
+      if (!r.ok) throw new Error();
+      const data = await r.json();
+      eventData.access_code = data.access_code;
+      document.getElementById('ev-code').textContent = data.access_code;
+      toast('New code: ' + data.access_code, 'success');
+    } catch(ex) { toast('Failed to regenerate code', 'error'); }
+  }
+
+  function toggleCustomCode() {
+    const wrap = document.getElementById('custom-code-wrap');
+    const showing = wrap.style.display === 'flex';
+    wrap.style.display = showing ? 'none' : 'flex';
+    if (!showing) {
+      const inp = document.getElementById('custom-code-input');
+      inp.value = '';
+      inp.focus();
+    }
+  }
+
+  async function saveCustomCode() {
+    const code = document.getElementById('custom-code-input').value.trim();
+    if (!code) { toast('Enter a code first', 'error'); return; }
+    if (code.length < 3) { toast('Code must be at least 3 characters', 'error'); return; }
+    try {
+      const r = await fetch('/api/events/' + eventId, {
+        method: 'PATCH', headers: H, body: JSON.stringify({ access_code: code })
+      });
+      if (!r.ok) throw new Error();
+      const data = await r.json();
+      eventData.access_code = data.access_code;
+      document.getElementById('ev-code').textContent = data.access_code;
+      toggleCustomCode();
+      toast('Access code set to ' + data.access_code, 'success');
+    } catch(ex) { toast('Failed to save code', 'error'); }
+  }
+
   /* ── HELPERS ── */
+  function getDayInfo(startDate, endDate) {
+    const start   = new Date(startDate + 'T00:00:00');
+    const end     = endDate ? new Date(endDate + 'T00:00:00') : start;
+    const todayStr = new Date().toLocaleDateString('en-CA');
+    const today   = new Date(todayStr + 'T00:00:00');
+    const total   = Math.floor((end - start) / 86400000) + 1;
+    const current = Math.floor((today - start) / 86400000) + 1;
+    if (current < 1 || current > total) return null;
+    return { day: current, total };
+  }
+
   let toastT;
   function toast(msg, type) {
     const el = document.getElementById('toast');
