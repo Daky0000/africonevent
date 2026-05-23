@@ -281,9 +281,20 @@
       document.getElementById('code-error').textContent = msg;
     }
 
-    function showAttendView() {
+    async function showAttendView() {
       document.getElementById('code-gate').style.display = 'none';
       document.getElementById('attend-view').style.display = 'block';
+
+      // Check if this device/IP has already marked attendance for this event
+      try {
+        const ipRes  = await fetch(`/api/events/${eventId}/check-ip`);
+        const ipData = await ipRes.json();
+        if (ipData.marked) {
+          showCongratsModal(ipData.name);
+          return;
+        }
+      } catch { /* network issue — let them proceed, server will block if needed */ }
+
       loadAttendees();
     }
 
@@ -341,6 +352,13 @@
         });
         if (!res.ok) throw new Error();
         const updated = await res.json();
+
+        // IP was already used (marked by this device before)
+        if (updated.ip_blocked) {
+          showCongratsModal(updated.name || a.name);
+          return;
+        }
+
         const idx = attendees.findIndex(x => x.id === id);
         if (idx !== -1) attendees[idx] = updated;
         render();
