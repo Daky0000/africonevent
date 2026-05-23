@@ -281,19 +281,19 @@
       document.getElementById('code-error').textContent = msg;
     }
 
-    async function showAttendView() {
+    function showAttendView() {
       document.getElementById('code-gate').style.display = 'none';
       document.getElementById('attend-view').style.display = 'block';
 
-      // Check if this device/IP has already marked attendance for this event
+      // Check if this browser already marked attendance for this event
       try {
-        const ipRes  = await fetch(`/api/events/${eventId}/check-ip`);
-        const ipData = await ipRes.json();
-        if (ipData.marked) {
-          showCongratsModal(ipData.name);
+        const stored = localStorage.getItem(`africon_attended_${eventId}`);
+        if (stored) {
+          const { name } = JSON.parse(stored);
+          showCongratsModal(name);
           return;
         }
-      } catch { /* network issue — let them proceed, server will block if needed */ }
+      } catch { /* corrupted entry — ignore and show list */ }
 
       loadAttendees();
     }
@@ -352,17 +352,13 @@
         });
         if (!res.ok) throw new Error();
         const updated = await res.json();
-
-        // IP was already used (marked by this device before)
-        if (updated.ip_blocked) {
-          showCongratsModal(updated.name || a.name);
-          return;
-        }
-
         const idx = attendees.findIndex(x => x.id === id);
         if (idx !== -1) attendees[idx] = updated;
         render();
         updateStats();
+
+        // Lock this browser so refresh can't re-open the list
+        localStorage.setItem(`africon_attended_${eventId}`, JSON.stringify({ name: updated.name }));
         showCongratsModal(updated.name);
       } catch {
         toast('Failed — try again');
