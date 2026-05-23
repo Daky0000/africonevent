@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"d:\\\\Africonevents\" status)",
+      "Bash(git -C \"d:\\\\Africonevents\" remote -v)",
+      "Bash(gh repo *)",
+      "PowerShell(gh repo list --limit 20 2>&1)",
+      "PowerShell(git config --global user.name)",
+      "PowerShell(git config --global user.email)",
+      "PowerShell(vercel --version 2>&1)",
+      "PowerShell(npm install -g vercel 2>&1)"
+    ]
+  }
+}

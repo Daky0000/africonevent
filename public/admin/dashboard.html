@@ -237,7 +237,7 @@
           <td>${e.total_attendees}</td>
           <td>${e.attended_count}</td>
           <td><span class="badge ${rate>=50?'badge-green':'badge-blue'}">${rate}%</span></td>
-          <td><button class="btn-red" onclick="event.stopPropagation();delEvent(${e.id},'${esc(e.name)}')" title="Delete"><i class="fas fa-trash"></i></button></td>
+          <td><button class="btn-red" data-id="${e.id}" data-name="${esc(e.name)}" onclick="event.stopPropagation();delEventBtn(this)" title="Delete"><i class="fas fa-trash"></i></button></td>
         </tr>`;
       }).join('')}</tbody>
     </table>`;
@@ -253,6 +253,10 @@
   }
 
   function goEvent(id) { window.location.href = '/admin/event.html?id=' + id; }
+
+  function delEventBtn(btn) {
+    delEvent(parseInt(btn.dataset.id), btn.dataset.name);
+  }
 
   async function delEvent(id, name) {
     if (!confirm(`Delete "${name}"?\nThis will remove all attendees too.`)) return;
@@ -281,11 +285,12 @@
     const btn   = document.getElementById('ev-btn');
     const status = document.getElementById('ev-status');
     status.textContent = '';
+    status.style.color = '#666';
 
-    if (!name)  { toast('Please enter an event name', 'error'); document.getElementById('ev-name').focus(); return; }
-    if (!start) { toast('Please select a start date', 'error'); document.getElementById('ev-start').focus(); return; }
-    if (!slug)  { toast('Slug is empty — type the event name first', 'error'); return; }
-    if (end && end < start) { toast('End date cannot be before start date', 'error'); return; }
+    if (!name)  { showStatus(status, 'Please enter an event name', true); document.getElementById('ev-name').focus(); return; }
+    if (!start) { showStatus(status, 'Please select a start date', true); document.getElementById('ev-start').focus(); return; }
+    if (!slug)  { showStatus(status, 'Slug is empty — type the event name first', true); return; }
+    if (end && end < start) { showStatus(status, 'End date cannot be before start date', true); return; }
 
     const useRepeat = document.getElementById('ev-repeat').checked;
     const repeat = useRepeat ? {
@@ -295,6 +300,7 @@
 
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating…';
+    status.textContent = '';
 
     try {
       const r = await fetch('/api/events', {
@@ -302,19 +308,32 @@
         body: JSON.stringify({ name, description: desc, start_date: start, end_date: end||null, slug, repeat }),
       });
       const data = await r.json();
-      if (!r.ok) { toast(data.error || 'Failed to create event', 'error'); return; }
+      if (!r.ok) {
+        const msg = data.error || 'Failed to create event';
+        showStatus(status, msg, true);
+        return;
+      }
 
       const created = Array.isArray(data) ? data : [data];
-      toast(created.length === 1 ? `"${created[0].name}" created!` : `${created.length} events created!`, 'success');
+      const msg = created.length === 1 ? `"${created[0].name}" created!` : `${created.length} events created!`;
+      showStatus(status, msg, false);
+      toast(msg, 'success');
       ['ev-name','ev-start','ev-end','ev-slug','ev-desc'].forEach(id => document.getElementById(id).value='');
       document.getElementById('ev-repeat').checked = false; toggleRepeat();
       loadEvents();
     } catch(e) {
-      toast('Network error — please try again', 'error');
+      console.error('createEvent error:', e);
+      showStatus(status, 'Network error — please try again', true);
     } finally {
       btn.disabled = false;
       btn.innerHTML = '<i class="fas fa-plus"></i> Create Event';
     }
+  }
+
+  function showStatus(el, msg, isError) {
+    el.textContent = (isError ? '⚠ ' : '✓ ') + msg;
+    el.style.color = isError ? '#c0392b' : '#1a7a3f';
+    toast(msg, isError ? 'error' : 'success');
   }
 
   function fmtDate(s, e) {
@@ -379,9 +398,9 @@
   let toastTimer;
   function toast(msg, type) {
     const el = document.getElementById('toast');
-    el.textContent = msg; el.className = 'show ' + type;
+    el.textContent = msg; el.className = 'show ' + (type || 'info');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+    toastTimer = setTimeout(() => { el.className = ''; }, type === 'error' ? 5000 : 3000);
   }
 
   function esc(s) {
