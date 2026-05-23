@@ -3,394 +3,491 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Africon Admin — Event</title>
+  <title>Africon — Event</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#f0f2f5; min-height:100vh; }
-    nav { background:#0052CC; color:white; display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:56px; }
-    .nav-brand { font-size:18px; font-weight:700; letter-spacing:2px; }
-    .nav-brand span { color:#6FCF97; font-size:11px; display:block; letter-spacing:1px; font-weight:400; }
-    .back-btn { color:white; text-decoration:none; font-size:13px; display:flex; align-items:center; gap:6px; }
-    .back-btn:hover { opacity:.8; }
-    .main { max-width:1100px; margin:0 auto; padding:28px 20px; }
-    .event-hd { background:white; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.08); padding:20px 24px; margin-bottom:20px; display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; }
-    .event-hd-info h2 { font-size:20px; color:#222; }
-    .event-hd-info p { font-size:13px; color:#666; margin-top:4px; }
-    .url-box { display:flex; align-items:center; gap:8px; background:#f0f4ff; border:1px solid #cce; border-radius:6px; padding:8px 12px; font-size:12px; color:#0052CC; cursor:pointer; }
-    .url-box:hover { background:#e0e8ff; }
-    .tabs { display:flex; gap:4px; margin-bottom:20px; border-bottom:2px solid #ddd; }
-    .tab { padding:10px 20px; cursor:pointer; font-size:14px; font-weight:600; color:#666; border-bottom:2px solid transparent; margin-bottom:-2px; }
-    .tab.active { color:#0052CC; border-bottom-color:#0052CC; }
-    .pane { display:none; }
-    .pane.active { display:block; }
-    .section { background:white; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.08); margin-bottom:20px; }
-    .section-hd { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid #eee; }
-    .section-hd h3 { font-size:14px; color:#333; font-weight:600; }
-    .section-body { padding:18px 20px; }
-    input, textarea { padding:9px 12px; border:1px solid #ddd; border-radius:6px; font-size:13px; font-family:inherit; width:100%; }
-    input:focus, textarea:focus { outline:none; border-color:#0052CC; }
-    .frow { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
-    .frow.three { grid-template-columns:1fr 1fr 1fr; }
-    .btn-primary { background:#0052CC; color:white; border:none; border-radius:6px; padding:9px 18px; font-weight:600; font-size:13px; cursor:pointer; }
-    .btn-primary:hover { background:#003d99; }
-    .btn-primary:disabled { background:#999; cursor:not-allowed; }
-    .btn-danger { background:none; border:none; color:#dc3545; cursor:pointer; font-size:13px; padding:4px 8px; border-radius:4px; }
-    .btn-danger:hover { background:#fdecea; }
-    .err { background:#fdecea; color:#c0392b; border-radius:6px; padding:9px 14px; font-size:12px; margin-bottom:10px; display:none; }
-    .ok  { background:#d4edda; color:#155724; border-radius:6px; padding:9px 14px; font-size:12px; margin-bottom:10px; display:none; }
-    /* UPLOAD */
-    .drop-zone { border:2px dashed #ccc; border-radius:8px; padding:28px; text-align:center; cursor:pointer; transition:border-color .2s; color:#999; font-size:13px; }
-    .drop-zone:hover, .drop-zone.drag { border-color:#0052CC; color:#0052CC; }
-    .drop-zone i { font-size:24px; margin-bottom:8px; display:block; }
-    /* ATTENDEES */
-    .search-box { margin-bottom:14px; }
-    .search-box input { padding:10px 12px; }
-    .at-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid #eee; border-radius:6px; margin-bottom:6px; cursor:pointer; transition:all .15s; }
-    .at-item:hover { border-color:#0052CC; }
-    .at-item.attended { background:#d4edda; border-color:#28a745; }
-    .at-item.not-attended { background:#f8d7da; border-color:#dc3545; }
-    .at-item.busy { opacity:.5; pointer-events:none; }
-    .at-info { flex:1; min-width:0; }
-    .at-name { font-weight:600; font-size:13px; color:#333; }
-    .at-meta { font-size:11px; color:#999; }
-    .at-icon { font-size:16px; }
-    .attended .at-icon { color:#28a745; }
-    .not-attended .at-icon { color:#dc3545; }
-    /* REPORT */
-    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:14px; margin-bottom:20px; }
-    .stat-card { background:#f8f9fa; border:1px solid #e0e0e0; border-radius:8px; padding:18px; text-align:center; }
-    .stat-val { font-size:28px; font-weight:700; color:#0052CC; }
-    .stat-lbl { font-size:11px; color:#999; text-transform:uppercase; font-weight:600; margin-top:4px; }
-    table { width:100%; border-collapse:collapse; font-size:13px; }
-    th { text-align:left; padding:8px 12px; background:#f8f9fa; color:#555; font-weight:600; font-size:11px; text-transform:uppercase; border-bottom:1px solid #eee; }
-    td { padding:8px 12px; border-bottom:1px solid #f0f0f0; color:#333; }
-    .badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; }
-    .badge-green { background:#d4edda; color:#155724; }
-    .badge-red   { background:#f8d7da; color:#721c24; }
-    .export-btn { background:#1a7a3f; color:white; border:none; border-radius:6px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; }
-    .export-btn:hover { background:#155732; }
-    .empty { text-align:center; padding:30px; color:#aaa; font-size:13px; }
-    @media(max-width:600px){ .frow,.frow.three{ grid-template-columns:1fr; } .event-hd{ flex-direction:column; } }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;min-height:100vh}
+    nav{background:#0052CC;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px}
+    .nav-brand{font-size:18px;font-weight:700;letter-spacing:2px}
+    .nav-brand span{color:#6FCF97;font-size:11px;display:block;letter-spacing:1px;font-weight:400}
+    .nav-back{color:#fff;text-decoration:none;font-size:13px;display:flex;align-items:center;gap:6px;opacity:.9}
+    .nav-back:hover{opacity:1}
+    .main{max-width:1060px;margin:0 auto;padding:24px 20px}
+    /* Event header */
+    .ev-hd{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:20px 24px;margin-bottom:20px}
+    .ev-hd-top{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px}
+    .ev-hd h2{font-size:20px;color:#111}
+    .ev-hd-meta{font-size:13px;color:#666;margin-top:4px}
+    .url-pill{display:inline-flex;align-items:center;gap:8px;background:#f0f4ff;border:1px solid #c0d0f0;border-radius:20px;padding:6px 14px;font-size:12px;color:#0052CC;cursor:pointer;font-weight:600}
+    .url-pill:hover{background:#e0ebff}
+    /* Tabs */
+    .tabs{display:flex;gap:0;margin-bottom:20px;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden}
+    .tab{flex:1;padding:13px;text-align:center;cursor:pointer;font-size:13px;font-weight:600;color:#666;border-bottom:3px solid transparent;transition:all .15s}
+    .tab:hover{background:#f8f9fa}
+    .tab.active{color:#0052CC;border-bottom-color:#0052CC;background:#f5f8ff}
+    .pane{display:none}.pane.active{display:block}
+    /* Card */
+    .card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:16px}
+    .card-hd{padding:14px 20px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between}
+    .card-hd h3{font-size:14px;font-weight:600;color:#333}
+    .card-body{padding:20px}
+    /* Add options — two big buttons */
+    .add-options{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:0}
+    .add-opt{border:2px dashed #d0d8e8;border-radius:10px;padding:24px 16px;text-align:center;cursor:pointer;transition:all .15s;color:#555}
+    .add-opt:hover,.add-opt.active{border-color:#0052CC;background:#f5f8ff;color:#0052CC}
+    .add-opt i{font-size:26px;display:block;margin-bottom:8px}
+    .add-opt strong{display:block;font-size:14px;margin-bottom:4px}
+    .add-opt span{font-size:12px;color:#888}
+    /* Panels */
+    .panel{display:none;margin-top:16px;padding:20px;background:#f8f9fa;border-radius:8px;border:1px solid #e0e0e0}
+    .panel.open{display:block}
+    .field{margin-bottom:12px}
+    .field label{display:block;font-size:11px;font-weight:700;color:#555;text-transform:uppercase;margin-bottom:5px}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    input,select,textarea{width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;font-family:inherit}
+    input:focus,select:focus{outline:none;border-color:#0052CC}
+    .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+    .btn-blue{background:#0052CC;color:#fff}.btn-blue:hover{background:#003d99}
+    .btn-blue:disabled{background:#999;cursor:not-allowed}
+    .btn-green{background:#1a7a3f;color:#fff}.btn-green:hover{background:#155732}
+    /* Drop zone */
+    .drop-zone{border:2px dashed #ccc;border-radius:8px;padding:28px;text-align:center;cursor:pointer;color:#999;font-size:13px;transition:border-color .2s}
+    .drop-zone:hover,.drop-zone.drag{border-color:#0052CC;color:#0052CC}
+    .drop-zone i{font-size:28px;display:block;margin-bottom:8px}
+    /* Search */
+    .search-wrap{position:relative;margin-bottom:14px}
+    .search-wrap input{padding-left:36px}
+    .search-wrap i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#aaa;font-size:13px}
+    /* Attendee list */
+    .at-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #eee;border-radius:6px;margin-bottom:6px;cursor:pointer;transition:all .15s;background:#fff}
+    .at-item:hover{border-color:#0052CC;background:#f5f8ff}
+    .at-item.attended{background:#d4edda;border-color:#28a745}
+    .at-item.absent{background:#fff8f8;border-color:#eee}
+    .at-item.busy{opacity:.5;pointer-events:none}
+    .at-check{width:18px;height:18px;flex-shrink:0}
+    .at-info{flex:1;min-width:0}
+    .at-name{font-weight:600;font-size:13px;color:#222}
+    .at-sub{font-size:11px;color:#999;margin-top:2px}
+    .at-icon{font-size:16px;flex-shrink:0}
+    .attended .at-icon{color:#28a745}
+    .absent .at-icon{color:#ddd}
+    .at-del{background:none;border:none;color:#ccc;cursor:pointer;font-size:13px;padding:3px 6px;border-radius:4px}
+    .at-del:hover{background:#fdecea;color:#dc3545}
+    /* Stats */
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+    .stat{background:#f8f9fa;border:1px solid #eee;border-radius:8px;padding:16px;text-align:center}
+    .stat-val{font-size:26px;font-weight:700;color:#0052CC}
+    .stat-lbl{font-size:11px;color:#999;text-transform:uppercase;font-weight:600;margin-top:3px}
+    /* Toast */
+    #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);padding:11px 22px;border-radius:24px;font-size:13px;font-weight:600;color:#fff;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9999}
+    #toast.show{opacity:1}
+    #toast.success{background:#1a7a3f}
+    #toast.error{background:#c0392b}
+    #toast.info{background:#0052CC}
+    .empty{text-align:center;padding:30px;color:#aaa;font-size:13px}
+    .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
+    .badge-green{background:#d4edda;color:#155724}
+    .badge-red{background:#f8d7da;color:#721c24}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{text-align:left;padding:8px 12px;background:#f8f9fa;color:#555;font-weight:600;font-size:11px;text-transform:uppercase;border-bottom:1px solid #eee}
+    td{padding:8px 12px;border-bottom:1px solid #f0f0f0;color:#333;vertical-align:middle}
+    @media(max-width:640px){.add-options,.grid3,.grid2,.stats-row{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-  <nav>
-    <div class="nav-brand">AFRICON <span>AI FOR GROWTH</span></div>
-    <a href="/admin/dashboard.html" class="back-btn"><i class="fas fa-arrow-left"></i> Dashboard</a>
-  </nav>
+<nav>
+  <div class="nav-brand">AFRICON <span>AI FOR GROWTH</span></div>
+  <a href="/admin/dashboard.html" class="nav-back"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+</nav>
 
-  <div class="main">
-    <div class="event-hd" id="event-hd">
-      <div class="event-hd-info">
+<div class="main">
+  <!-- Event header -->
+  <div class="ev-hd">
+    <div class="ev-hd-top">
+      <div>
         <h2 id="ev-title">Loading…</h2>
-        <p id="ev-meta"></p>
+        <div class="ev-hd-meta" id="ev-meta"></div>
       </div>
-      <div id="ev-url-box" class="url-box" onclick="copyURL()" title="Click to copy public attendance link">
+      <div class="url-pill" onclick="copyURL()" title="Copy public attendance link">
         <i class="fas fa-link"></i>
-        <span id="ev-url-text"></span>
+        <span id="ev-url-label">Public Link</span>
         <i class="fas fa-copy"></i>
-      </div>
-    </div>
-
-    <div class="tabs">
-      <div class="tab active" onclick="switchTab('attendees')">Attendees</div>
-      <div class="tab" onclick="switchTab('upload')">Upload CSV</div>
-      <div class="tab" onclick="switchTab('report')">Report</div>
-    </div>
-
-    <!-- ATTENDEES TAB -->
-    <div id="pane-attendees" class="pane active">
-      <div class="section">
-        <div class="section-hd"><h3>Add Single Attendee</h3></div>
-        <div class="section-body">
-          <div id="add-err" class="err"></div>
-          <div class="frow three">
-            <input id="add-name" placeholder="Full name">
-            <input id="add-phone" placeholder="Phone (optional)">
-            <input id="add-email" placeholder="Email (optional)">
-          </div>
-          <button class="btn-primary" id="add-btn" onclick="addSingle()">Add Attendee</button>
-        </div>
-      </div>
-      <div class="section">
-        <div class="section-hd">
-          <h3>Attendees (<span id="at-count">0</span>)</h3>
-          <small style="color:#999">Click a name to toggle attendance</small>
-        </div>
-        <div class="section-body">
-          <div class="search-box">
-            <input id="search" placeholder="&#x1F50D; Search…" oninput="renderAttendees()">
-          </div>
-          <div id="at-list"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- UPLOAD TAB -->
-    <div id="pane-upload" class="pane">
-      <div class="section">
-        <div class="section-hd"><h3>Upload CSV</h3></div>
-        <div class="section-body">
-          <div id="up-err" class="err"></div>
-          <div id="up-ok"  class="ok"></div>
-          <p style="font-size:13px;color:#666;margin-bottom:14px;">
-            CSV must have a <strong>name</strong> column. Optionally include <strong>phone</strong> and <strong>email</strong> columns. First row = headers.
-          </p>
-          <div class="drop-zone" id="drop-zone" onclick="document.getElementById('csv-file').click()">
-            <i class="fas fa-file-csv"></i>
-            Click to choose a CSV file, or drag and drop here
-          </div>
-          <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="handleFile(this.files[0])">
-          <div id="preview" style="display:none; margin-top:14px;">
-            <p style="font-size:13px;color:#333;margin-bottom:10px;"><strong id="preview-count"></strong> rows detected</p>
-            <div id="preview-table" style="max-height:220px;overflow-y:auto;border:1px solid #eee;border-radius:6px;"></div>
-            <button class="btn-primary" id="up-btn" style="margin-top:12px" onclick="uploadCSV()">Upload All</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- REPORT TAB -->
-    <div id="pane-report" class="pane">
-      <div class="section">
-        <div class="section-hd">
-          <h3>Attendance Report</h3>
-          <button class="export-btn" onclick="exportCSV()"><i class="fas fa-download"></i> Export CSV</button>
-        </div>
-        <div class="section-body">
-          <div class="stats-grid" id="report-stats"></div>
-          <div id="report-table-wrap"><div class="empty"><i class="fas fa-spinner fa-spin"></i></div></div>
-        </div>
       </div>
     </div>
   </div>
 
-  <script>
-    const token = localStorage.getItem('token');
-    if (!token) window.location.href = '/admin/login.html';
-    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('participants')"><i class="fas fa-users"></i> Participants</div>
+    <div class="tab" onclick="switchTab('report')"><i class="fas fa-chart-bar"></i> Report</div>
+  </div>
 
-    const params  = new URLSearchParams(location.search);
-    const eventId = params.get('id');
-    if (!eventId) window.location.href = '/admin/dashboard.html';
+  <!-- PARTICIPANTS TAB -->
+  <div id="pane-participants" class="pane active">
 
-    let eventData = null;
-    let attendees  = [];
-    let csvRows    = [];
-
-    async function init() {
-      const res = await fetch(`/api/events/${eventId}`, { headers });
-      if (!res.ok) { window.location.href = '/admin/dashboard.html'; return; }
-      eventData = await res.json();
-      document.getElementById('ev-title').textContent = eventData.name;
-      const start = new Date(eventData.start_date).toLocaleDateString();
-      const end   = eventData.end_date ? new Date(eventData.end_date).toLocaleDateString() : null;
-      const dateStr = end && end !== start ? `${start} – ${end}` : start;
-      document.getElementById('ev-meta').textContent = `Date: ${dateStr}  ·  Slug: ${eventData.slug}`;
-      const publicURL = `${location.origin}/attend.html?event=${eventData.slug}`;
-      document.getElementById('ev-url-text').textContent = publicURL;
-      loadAttendees();
-    }
-
-    function copyURL() {
-      const url = `${location.origin}/attend.html?event=${eventData.slug}`;
-      navigator.clipboard.writeText(url).then(() => {
-        const el = document.getElementById('ev-url-box');
-        el.style.background = '#d4edda'; el.style.borderColor = '#28a745';
-        setTimeout(() => { el.style.background = ''; el.style.borderColor = ''; }, 1500);
-      });
-    }
-
-    async function loadAttendees() {
-      const res = await fetch(`/api/events/${eventId}/attendees`, { headers });
-      if (!res.ok) return;
-      attendees = await res.json();
-      renderAttendees();
-    }
-
-    function renderAttendees() {
-      const filter = document.getElementById('search').value.toLowerCase();
-      const list   = document.getElementById('at-list');
-      document.getElementById('at-count').textContent = attendees.length;
-
-      const filtered = attendees.filter(a =>
-        a.name.toLowerCase().includes(filter) ||
-        (a.phone || '').includes(filter) ||
-        (a.email || '').toLowerCase().includes(filter)
-      );
-
-      if (!filtered.length) { list.innerHTML = '<div class="empty">No results.</div>'; return; }
-
-      list.innerHTML = filtered.map(a => `
-        <div class="at-item ${a.attended ? 'attended' : 'not-attended'}" data-id="${a.id}" onclick="toggle(${a.id})">
-          <input type="checkbox" ${a.attended ? 'checked' : ''} onclick="event.stopPropagation(); toggle(${a.id})">
-          <div class="at-info">
-            <div class="at-name">${esc(a.name)}</div>
-            <div class="at-meta">${[a.phone, a.email].filter(Boolean).join(' · ') || '—'}</div>
+    <!-- Add options -->
+    <div class="card">
+      <div class="card-hd"><h3><i class="fas fa-user-plus" style="color:#0052CC;margin-right:6px"></i>Add Participants</h3></div>
+      <div class="card-body">
+        <div class="add-options">
+          <div class="add-opt" id="opt-manual" onclick="openPanel('manual')">
+            <i class="fas fa-keyboard"></i>
+            <strong>Add Manually</strong>
+            <span>Enter participant details one by one</span>
           </div>
-          <div class="at-icon"><i class="fas ${a.attended ? 'fa-check-circle' : 'fa-circle'}"></i></div>
-          <button class="btn-danger" onclick="event.stopPropagation(); removeAttendee(${a.id})" title="Remove"><i class="fas fa-times"></i></button>
+          <div class="add-opt" id="opt-csv" onclick="openPanel('csv')">
+            <i class="fas fa-file-csv"></i>
+            <strong>Upload CSV File</strong>
+            <span>Bulk import from a spreadsheet</span>
+          </div>
         </div>
-      `).join('');
-    }
 
-    async function toggle(id) {
-      const el = document.querySelector(`[data-id="${id}"]`);
-      if (el) el.classList.add('busy');
-      const res = await fetch(`/api/events/${eventId}/attendance`, {
-        method: 'PATCH', headers, body: JSON.stringify({ attendee_id: id }),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        const idx = attendees.findIndex(a => a.id === id);
-        if (idx !== -1) attendees[idx] = updated;
-        renderAttendees();
-      }
-    }
+        <!-- Manual panel -->
+        <div class="panel" id="panel-manual">
+          <div class="grid3">
+            <div class="field"><label>Full Name *</label><input id="add-name" placeholder="e.g. Kwame Mensah"></div>
+            <div class="field"><label>Phone</label><input id="add-phone" placeholder="e.g. 0244123456" type="tel"></div>
+            <div class="field"><label>Email</label><input id="add-email" placeholder="e.g. kwame@email.com" type="email"></div>
+          </div>
+          <button class="btn btn-blue" id="add-btn" onclick="addManual()"><i class="fas fa-plus"></i> Add Participant</button>
+        </div>
 
-    async function removeAttendee(id) {
-      if (!confirm('Remove this attendee?')) return;
-      await fetch(`/api/events/${eventId}/attendees`, {
-        method: 'DELETE', headers, body: JSON.stringify({ attendee_id: id }),
-      });
-      attendees = attendees.filter(a => a.id !== id);
-      renderAttendees();
-    }
+        <!-- CSV panel -->
+        <div class="panel" id="panel-csv">
+          <p style="font-size:13px;color:#555;margin-bottom:12px">
+            Your CSV must have a <strong>name</strong> column. Optionally include <strong>phone</strong> and <strong>email</strong> columns. The first row should be the header row.
+          </p>
+          <a href="#" onclick="downloadTemplate()" style="font-size:12px;color:#0052CC;display:inline-block;margin-bottom:14px"><i class="fas fa-download"></i> Download CSV template</a>
+          <div class="drop-zone" id="drop-zone" onclick="document.getElementById('csv-input').click()">
+            <i class="fas fa-cloud-upload-alt"></i>
+            Click here to choose a CSV file, or drag and drop
+          </div>
+          <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleCSV(this.files[0])">
+          <div id="csv-preview" style="display:none;margin-top:14px">
+            <p style="font-size:13px;color:#333;margin-bottom:8px"><i class="fas fa-check-circle" style="color:#28a745"></i> <strong id="csv-count"></strong> participants ready to import</p>
+            <div id="csv-table" style="max-height:200px;overflow-y:auto;border:1px solid #eee;border-radius:6px;margin-bottom:12px"></div>
+            <button class="btn btn-blue" id="csv-btn" onclick="uploadCSV()"><i class="fas fa-upload"></i> Import All</button>
+            <button class="btn" style="background:#eee;color:#555;margin-left:8px" onclick="clearCSV()">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-    async function addSingle() {
-      const name  = document.getElementById('add-name').value.trim();
-      const phone = document.getElementById('add-phone').value.trim();
-      const email = document.getElementById('add-email').value.trim();
-      const btn   = document.getElementById('add-btn');
-      document.getElementById('add-err').style.display = 'none';
-      if (!name) { show('add-err', 'Name is required'); return; }
-      btn.disabled = true; btn.textContent = 'Adding…';
-      const res = await fetch(`/api/events/${eventId}/attendees`, {
-        method: 'POST', headers, body: JSON.stringify({ name, phone, email }),
-      });
-      const data = await res.json();
-      btn.disabled = false; btn.textContent = 'Add Attendee';
-      if (!res.ok) { show('add-err', data.error); return; }
-      attendees.push(data);
-      ['add-name','add-phone','add-email'].forEach(id => document.getElementById(id).value = '');
-      renderAttendees();
-    }
+    <!-- Participants list -->
+    <div class="card">
+      <div class="card-hd">
+        <h3><i class="fas fa-list" style="color:#0052CC;margin-right:6px"></i>Participants <span id="at-count" style="font-size:12px;color:#999;font-weight:400"></span></h3>
+        <small style="color:#888;font-size:12px">Click a name to mark attendance</small>
+      </div>
+      <div class="card-body">
+        <div class="search-wrap">
+          <i class="fas fa-search"></i>
+          <input id="search" placeholder="Search by name, phone or email…" oninput="renderList()">
+        </div>
+        <div id="at-list"><div class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+      </div>
+    </div>
+  </div>
 
-    /* CSV */
-    const dz = document.getElementById('drop-zone');
-    dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag'); });
-    dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
-    dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
+  <!-- REPORT TAB -->
+  <div id="pane-report" class="pane">
+    <div class="card">
+      <div class="card-hd">
+        <h3><i class="fas fa-chart-bar" style="color:#0052CC;margin-right:6px"></i>Attendance Report</h3>
+        <button class="btn btn-green" onclick="exportCSV()"><i class="fas fa-download"></i> Export CSV</button>
+      </div>
+      <div class="card-body">
+        <div class="stats-row" id="rpt-stats"></div>
+        <div id="rpt-table"><div class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+      </div>
+    </div>
+  </div>
+</div>
 
-    function handleFile(file) {
-      if (!file) return;
-      hide('up-err'); hide('up-ok');
-      const reader = new FileReader();
-      reader.onload = e => {
-        csvRows = parseCSV(e.target.result);
-        if (!csvRows.length) { show('up-err', 'No valid rows found. Ensure CSV has a "name" column.'); return; }
-        document.getElementById('preview-count').textContent = csvRows.length;
-        document.getElementById('preview-table').innerHTML = `<table>
-          <thead><tr><th>Name</th><th>Phone</th><th>Email</th></tr></thead>
-          <tbody>${csvRows.slice(0,10).map(r => `<tr>
-            <td>${esc(r.name)}</td><td>${esc(r.phone||'')}</td><td>${esc(r.email||'')}</td>
-          </tr>`).join('')}
-          ${csvRows.length>10?`<tr><td colspan="3" style="color:#999;font-style:italic">…and ${csvRows.length-10} more</td></tr>`:''}
-          </tbody></table>`;
-        document.getElementById('preview').style.display = 'block';
-      };
-      reader.readAsText(file);
-    }
+<div id="toast"></div>
 
-    function parseCSV(text) {
-      const lines = text.trim().split(/\r?\n/);
-      if (lines.length < 2) return [];
-      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,'').toLowerCase());
-      const nameIdx  = headers.indexOf('name');
-      if (nameIdx === -1) return [];
-      const phoneIdx = headers.indexOf('phone');
-      const emailIdx = headers.indexOf('email');
-      return lines.slice(1).map(line => {
-        const parts = line.split(',').map(v => v.trim().replace(/^"|"$/g,''));
-        const name  = parts[nameIdx] || '';
-        if (!name) return null;
-        return { name, phone: phoneIdx>=0 ? parts[phoneIdx]||'' : '', email: emailIdx>=0 ? parts[emailIdx]||'' : '' };
-      }).filter(Boolean);
-    }
+<script>
+  const token = localStorage.getItem('token');
+  if (!token) window.location.replace('/admin/login.html');
+  const H = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token };
 
-    async function uploadCSV() {
-      const btn = document.getElementById('up-btn');
-      hide('up-err'); hide('up-ok');
-      btn.disabled = true; btn.textContent = 'Uploading…';
-      const res = await fetch(`/api/events/${eventId}/attendees`, {
-        method: 'POST', headers, body: JSON.stringify({ attendees: csvRows }),
-      });
-      const data = await res.json();
-      btn.disabled = false; btn.textContent = 'Upload All';
-      if (!res.ok) { show('up-err', data.error); return; }
-      show('up-ok', `${data.length} attendees uploaded successfully.`);
-      document.getElementById('preview').style.display = 'none';
-      csvRows = [];
-      document.getElementById('csv-file').value = '';
+  const params  = new URLSearchParams(location.search);
+  const eventId = params.get('id');
+  if (!eventId) window.location.replace('/admin/dashboard.html');
+
+  let eventData = null;
+  let attendees = [];
+  let csvRows   = [];
+
+  /* ── INIT ── */
+  async function init() {
+    try {
+      const r = await fetch('/api/events/' + eventId, { headers: H });
+      if (!r.ok) { window.location.replace('/admin/dashboard.html'); return; }
+      eventData = await r.json();
+
+      document.getElementById('ev-title').textContent = eventData.name;
+      const s   = new Date(eventData.start_date).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+      const e   = eventData.end_date ? new Date(eventData.end_date).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) : null;
+      document.getElementById('ev-meta').textContent =
+        (e && e !== s ? s + ' – ' + e : s) + '  ·  Slug: ' + eventData.slug;
+      document.getElementById('ev-url-label').textContent =
+        location.origin + '/attend.html?event=' + eventData.slug;
+      document.title = eventData.name + ' — Africon';
+
       loadAttendees();
-      switchTab('attendees');
+    } catch(ex) { toast('Failed to load event', 'error'); }
+  }
+
+  function copyURL() {
+    const url = location.origin + '/attend.html?event=' + eventData.slug;
+    navigator.clipboard.writeText(url).then(() => toast('Public link copied!', 'success'));
+  }
+
+  /* ── TABS ── */
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['participants','report'][i] === name));
+    document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+    document.getElementById('pane-' + name).classList.add('active');
+    if (name === 'report') loadReport();
+  }
+
+  /* ── ADD PANELS ── */
+  let openPanelName = null;
+  function openPanel(name) {
+    if (openPanelName === name) {
+      document.getElementById('panel-' + name).classList.remove('open');
+      document.getElementById('opt-' + name).classList.remove('active');
+      openPanelName = null;
+      return;
+    }
+    ['manual','csv'].forEach(n => {
+      document.getElementById('panel-' + n).classList.remove('open');
+      document.getElementById('opt-' + n).classList.remove('active');
+    });
+    document.getElementById('panel-' + name).classList.add('open');
+    document.getElementById('opt-' + name).classList.add('active');
+    openPanelName = name;
+  }
+
+  /* ── ATTENDEES ── */
+  async function loadAttendees() {
+    try {
+      const r = await fetch('/api/events/' + eventId + '/attendees', { headers: H });
+      if (!r.ok) return;
+      attendees = await r.json();
+      renderList();
+    } catch(ex) {}
+  }
+
+  function renderList() {
+    const filter = document.getElementById('search').value.toLowerCase();
+    const list   = document.getElementById('at-list');
+    document.getElementById('at-count').textContent =
+      '(' + attendees.length + ' registered, ' + attendees.filter(a=>a.attended).length + ' attended)';
+
+    const filtered = attendees.filter(a =>
+      a.name.toLowerCase().includes(filter) ||
+      (a.phone||'').includes(filter) ||
+      (a.email||'').toLowerCase().includes(filter)
+    );
+
+    if (!filtered.length) {
+      list.innerHTML = `<div class="empty">${filter ? 'No results for "'+esc(filter)+'"' : 'No participants yet — add some above.'}</div>`;
+      return;
     }
 
-    /* REPORT */
-    async function loadReport() {
-      document.getElementById('report-table-wrap').innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i></div>';
-      const res = await fetch(`/api/events/${eventId}/report`, { headers });
-      if (!res.ok) return;
-      const { stats, attendees: list } = await res.json();
-      document.getElementById('report-stats').innerHTML = `
-        <div class="stat-card"><div class="stat-val">${stats.total}</div><div class="stat-lbl">Registered</div></div>
-        <div class="stat-card"><div class="stat-val">${stats.attended}</div><div class="stat-lbl">Attended</div></div>
-        <div class="stat-card"><div class="stat-val">${stats.not_attended}</div><div class="stat-lbl">Absent</div></div>
-        <div class="stat-card"><div class="stat-val">${stats.rate}%</div><div class="stat-lbl">Rate</div></div>
+    list.innerHTML = filtered.map(a => `
+      <div class="at-item ${a.attended?'attended':'absent'}" data-id="${a.id}" onclick="toggle(${a.id})">
+        <input type="checkbox" class="at-check" ${a.attended?'checked':''} onclick="event.stopPropagation();toggle(${a.id})">
+        <div class="at-info">
+          <div class="at-name">${esc(a.name)}</div>
+          <div class="at-sub">${[a.phone,a.email].filter(Boolean).join(' · ')||'—'}</div>
+        </div>
+        <div class="at-icon"><i class="fas ${a.attended?'fa-check-circle':'fa-circle'}"></i></div>
+        <button class="at-del" onclick="event.stopPropagation();removeAt(${a.id})" title="Remove"><i class="fas fa-times"></i></button>
+      </div>
+    `).join('');
+  }
+
+  async function toggle(id) {
+    const el = document.querySelector('[data-id="'+id+'"]');
+    if (el) el.classList.add('busy');
+    try {
+      const r = await fetch('/api/events/' + eventId + '/attendance', {
+        method:'PATCH', headers:H, body: JSON.stringify({attendee_id:id})
+      });
+      if (!r.ok) throw new Error();
+      const updated = await r.json();
+      const idx = attendees.findIndex(a => a.id === id);
+      if (idx !== -1) attendees[idx] = updated;
+      renderList();
+      toast(updated.attended ? '✓ Marked as attended' : 'Attendance removed', updated.attended?'success':'info');
+    } catch(ex) {
+      if (el) el.classList.remove('busy');
+      toast('Failed to update', 'error');
+    }
+  }
+
+  async function removeAt(id) {
+    if (!confirm('Remove this participant?')) return;
+    await fetch('/api/events/' + eventId + '/attendees', {
+      method:'DELETE', headers:H, body: JSON.stringify({attendee_id:id})
+    });
+    attendees = attendees.filter(a => a.id !== id);
+    renderList();
+  }
+
+  /* ── MANUAL ADD ── */
+  async function addManual() {
+    const name  = document.getElementById('add-name').value.trim();
+    const phone = document.getElementById('add-phone').value.trim();
+    const email = document.getElementById('add-email').value.trim();
+    const btn   = document.getElementById('add-btn');
+    if (!name) { toast('Name is required', 'error'); document.getElementById('add-name').focus(); return; }
+
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding…';
+    try {
+      const r = await fetch('/api/events/' + eventId + '/attendees', {
+        method:'POST', headers:H, body: JSON.stringify({name,phone,email})
+      });
+      if (!r.ok) { const d = await r.json(); toast(d.error||'Failed', 'error'); return; }
+      const newA = await r.json();
+      attendees.push(newA);
+      ['add-name','add-phone','add-email'].forEach(id => document.getElementById(id).value='');
+      document.getElementById('add-name').focus();
+      renderList();
+      toast(name + ' added!', 'success');
+    } catch(ex) { toast('Network error', 'error');
+    } finally { btn.disabled=false; btn.innerHTML='<i class="fas fa-plus"></i> Add Participant'; }
+  }
+
+  /* ── CSV ── */
+  const dz = document.getElementById('drop-zone');
+  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); handleCSV(e.dataTransfer.files[0]); });
+
+  function handleCSV(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      csvRows = parseCSV(e.target.result);
+      if (!csvRows.length) { toast('No valid rows found. Ensure CSV has a "name" column.', 'error'); return; }
+      document.getElementById('csv-count').textContent = csvRows.length;
+      document.getElementById('csv-table').innerHTML = `<table>
+        <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Email</th></tr></thead>
+        <tbody>${csvRows.slice(0,8).map((r,i) => `<tr>
+          <td>${i+1}</td><td>${esc(r.name)}</td><td>${esc(r.phone||'')}</td><td>${esc(r.email||'')}</td>
+        </tr>`).join('')}
+        ${csvRows.length>8?`<tr><td colspan="4" style="color:#999;font-style:italic;text-align:center">…and ${csvRows.length-8} more rows</td></tr>`:''}
+        </tbody></table>`;
+      document.getElementById('csv-preview').style.display = 'block';
+    };
+    reader.readAsText(file);
+  }
+
+  function parseCSV(text) {
+    const lines = text.trim().split(/\r?\n/);
+    if (lines.length < 2) return [];
+    const hdrs = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,'').toLowerCase());
+    const ni = hdrs.indexOf('name'), pi = hdrs.indexOf('phone'), ei = hdrs.indexOf('email');
+    if (ni === -1) return [];
+    return lines.slice(1).map(line => {
+      const parts = line.split(',').map(v => v.trim().replace(/^"|"$/g,''));
+      const name = parts[ni]||''; if (!name) return null;
+      return { name, phone: pi>=0?parts[pi]||'':'', email: ei>=0?parts[ei]||'':'' };
+    }).filter(Boolean);
+  }
+
+  async function uploadCSV() {
+    const btn = document.getElementById('csv-btn');
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Importing…';
+    try {
+      const r = await fetch('/api/events/' + eventId + '/attendees', {
+        method:'POST', headers:H, body: JSON.stringify({attendees:csvRows})
+      });
+      const data = await r.json();
+      if (!r.ok) { toast(data.error||'Import failed', 'error'); return; }
+      toast(data.length + ' participants imported!', 'success');
+      clearCSV();
+      loadAttendees();
+    } catch(ex) { toast('Network error', 'error');
+    } finally { btn.disabled=false; btn.innerHTML='<i class="fas fa-upload"></i> Import All'; }
+  }
+
+  function clearCSV() {
+    csvRows=[]; document.getElementById('csv-input').value='';
+    document.getElementById('csv-preview').style.display='none';
+  }
+
+  function downloadTemplate() {
+    const csv = 'name,phone,email\nKwame Mensah,0244123456,kwame@example.com\nAfia Boateng,0244654321,afia@example.com';
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'participants-template.csv';
+    a.click();
+  }
+
+  /* ── REPORT ── */
+  let reportData = null;
+
+  async function loadReport() {
+    document.getElementById('rpt-table').innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+    try {
+      const r = await fetch('/api/events/' + eventId + '/report', { headers:H });
+      if (!r.ok) return;
+      reportData = await r.json();
+      const { stats, attendees:list } = reportData;
+      document.getElementById('rpt-stats').innerHTML = `
+        <div class="stat"><div class="stat-val">${stats.total}</div><div class="stat-lbl">Registered</div></div>
+        <div class="stat"><div class="stat-val">${stats.attended}</div><div class="stat-lbl">Attended</div></div>
+        <div class="stat"><div class="stat-val">${stats.not_attended}</div><div class="stat-lbl">Absent</div></div>
+        <div class="stat"><div class="stat-val">${stats.rate}%</div><div class="stat-lbl">Rate</div></div>
       `;
-      document.getElementById('report-table-wrap').innerHTML = `<table>
+      document.getElementById('rpt-table').innerHTML = `<table>
         <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Email</th><th>Status</th><th>Time</th></tr></thead>
         <tbody>${list.map((a,i) => `<tr>
           <td>${i+1}</td>
-          <td>${esc(a.name)}</td>
+          <td><strong>${esc(a.name)}</strong></td>
           <td>${esc(a.phone||'—')}</td>
           <td>${esc(a.email||'—')}</td>
           <td><span class="badge ${a.attended?'badge-green':'badge-red'}">${a.attended?'Attended':'Absent'}</span></td>
-          <td>${a.attended_at ? new Date(a.attended_at).toLocaleString() : '—'}</td>
+          <td style="font-size:11px">${a.attended_at?new Date(a.attended_at).toLocaleString():'—'}</td>
         </tr>`).join('')}</tbody>
       </table>`;
-      window._reportData = { stats, list };
-    }
+    } catch(ex) {}
+  }
 
-    function exportCSV() {
-      if (!window._reportData) return;
-      const rows = [['Name','Phone','Email','Status','Time']];
-      window._reportData.list.forEach(a => rows.push([
-        a.name, a.phone||'', a.email||'',
-        a.attended?'Attended':'Absent',
-        a.attended_at ? new Date(a.attended_at).toLocaleString() : '',
-      ]));
-      const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-      const a = document.createElement('a');
-      a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-      a.download = `${eventData.slug}-report.csv`;
-      a.click();
-    }
+  function exportCSV() {
+    if (!reportData) { toast('Load the report first', 'info'); return; }
+    const rows = [['Name','Phone','Email','Status','Time']];
+    reportData.attendees.forEach(a => rows.push([
+      a.name, a.phone||'', a.email||'',
+      a.attended?'Attended':'Absent',
+      a.attended_at ? new Date(a.attended_at).toLocaleString() : '',
+    ]));
+    const csv = rows.map(r => r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = (eventData.slug||'event') + '-report.csv';
+    a.click();
+  }
 
-    function switchTab(name) {
-      const names = ['attendees','upload','report'];
-      document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i] === name));
-      document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
-      document.getElementById('pane-' + name).classList.add('active');
-      if (name === 'report') loadReport();
-    }
+  /* ── HELPERS ── */
+  let toastT;
+  function toast(msg, type) {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.className = 'show '+(type||'info');
+    clearTimeout(toastT); toastT = setTimeout(() => el.className='', 3000);
+  }
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
 
-    function show(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block'; }
-    function hide(id) { document.getElementById(id).style.display = 'none'; }
-    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-    init();
-  </script>
+  init();
+</script>
 </body>
 </html>

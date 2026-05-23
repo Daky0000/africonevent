@@ -6,377 +6,389 @@
   <title>Africon Admin — Dashboard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#f0f2f5; min-height:100vh; }
-    /* NAV */
-    nav {
-      background: #0052CC; color: white;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 24px; height: 56px;
-    }
-    .nav-brand { font-size:18px; font-weight:700; letter-spacing:2px; }
-    .nav-brand span { color:#6FCF97; font-size:11px; display:block; letter-spacing:1px; font-weight:400; }
-    .nav-right { display:flex; align-items:center; gap:16px; font-size:13px; }
-    .nav-right button { background:rgba(255,255,255,0.15); color:white; border:none; border-radius:5px; padding:6px 14px; cursor:pointer; font-size:13px; }
-    .nav-right button:hover { background:rgba(255,255,255,0.25); }
-    /* MAIN */
-    .main { max-width: 1100px; margin: 0 auto; padding: 28px 20px; }
-    /* TABS */
-    .tabs { display:flex; gap:4px; margin-bottom:24px; border-bottom:2px solid #ddd; }
-    .tab { padding:10px 20px; cursor:pointer; font-size:14px; font-weight:600; color:#666; border-bottom:2px solid transparent; margin-bottom:-2px; }
-    .tab.active { color:#0052CC; border-bottom-color:#0052CC; }
-    .pane { display:none; }
-    .pane.active { display:block; }
-    /* CARDS */
-    .summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px; margin-bottom:28px; }
-    .scard { background:white; border-radius:8px; padding:18px; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,.08); }
-    .scard-val { font-size:30px; font-weight:700; color:#0052CC; }
-    .scard-lbl { font-size:11px; color:#999; text-transform:uppercase; font-weight:600; margin-top:4px; }
-    /* SECTION */
-    .section { background:white; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.08); margin-bottom:20px; }
-    .section-hd { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #eee; }
-    .section-hd h3 { font-size:15px; color:#333; }
-    .section-body { padding:20px; }
-    /* FORM */
-    .frow { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
-    .frow.three { grid-template-columns:1fr 1fr 1fr; }
-    .frow.one { grid-template-columns:1fr; }
-    input, textarea, select {
-      padding:9px 12px; border:1px solid #ddd; border-radius:6px;
-      font-size:13px; font-family:inherit; width:100%;
-    }
-    input:focus, textarea:focus { outline:none; border-color:#0052CC; }
-    .btn-primary { background:#0052CC; color:white; border:none; border-radius:6px; padding:9px 20px; font-weight:600; font-size:13px; cursor:pointer; }
-    .btn-primary:hover { background:#003d99; }
-    .btn-primary:disabled { background:#999; cursor:not-allowed; }
-    .btn-danger { background:#dc3545; color:white; border:none; border-radius:5px; padding:5px 12px; font-size:12px; cursor:pointer; }
-    .btn-danger:hover { background:#b02a37; }
-    .btn-sm { background:#0052CC; color:white; border:none; border-radius:5px; padding:5px 12px; font-size:12px; cursor:pointer; }
-    .btn-sm:hover { background:#003d99; }
-    /* TABLE */
-    table { width:100%; border-collapse:collapse; font-size:13px; }
-    th { text-align:left; padding:9px 12px; background:#f8f9fa; color:#555; font-weight:600; font-size:11px; text-transform:uppercase; border-bottom:1px solid #eee; }
-    td { padding:9px 12px; border-bottom:1px solid #f0f0f0; color:#333; vertical-align:middle; }
-    tr:last-child td { border-bottom:none; }
-    tr:hover td { background:#fafafa; }
-    .badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; }
-    .badge-green { background:#d4edda; color:#155724; }
-    .badge-blue { background:#cce5ff; color:#004085; }
-    .err { background:#fdecea; color:#c0392b; border-radius:6px; padding:9px 14px; font-size:12px; margin-bottom:12px; display:none; }
-    .ok { background:#d4edda; color:#155724; border-radius:6px; padding:9px 14px; font-size:12px; margin-bottom:12px; display:none; }
-    .empty { text-align:center; padding:30px; color:#aaa; font-size:13px; }
-    @media(max-width:600px){ .frow,.frow.three{ grid-template-columns:1fr; } }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;min-height:100vh}
+    nav{background:#0052CC;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px}
+    .nav-brand{font-size:18px;font-weight:700;letter-spacing:2px}
+    .nav-brand span{color:#6FCF97;font-size:11px;display:block;letter-spacing:1px;font-weight:400}
+    .nav-right{display:flex;align-items:center;gap:16px;font-size:13px}
+    .nav-right .logout{background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:5px;padding:6px 14px;cursor:pointer;font-size:13px}
+    .nav-right .logout:hover{background:rgba(255,255,255,.25)}
+    .main{max-width:1100px;margin:0 auto;padding:28px 20px}
+    .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:28px}
+    .scard{background:#fff;border-radius:8px;padding:18px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+    .scard-val{font-size:30px;font-weight:700;color:#0052CC}
+    .scard-lbl{font-size:11px;color:#999;text-transform:uppercase;font-weight:600;margin-top:4px}
+    .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid #ddd}
+    .tab{padding:10px 20px;cursor:pointer;font-size:14px;font-weight:600;color:#666;border-bottom:2px solid transparent;margin-bottom:-2px}
+    .tab.active{color:#0052CC;border-bottom-color:#0052CC}
+    .pane{display:none}.pane.active{display:block}
+    .card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:20px}
+    .card-hd{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #eee}
+    .card-hd h3{font-size:15px;color:#333;font-weight:600}
+    .card-body{padding:20px}
+    .field{margin-bottom:14px}
+    .field label{display:block;font-size:11px;font-weight:700;color:#555;text-transform:uppercase;margin-bottom:5px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+    input,select,textarea{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;font-family:inherit}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:#0052CC;box-shadow:0 0 0 3px rgba(0,82,204,.1)}
+    .btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s}
+    .btn-blue{background:#0052CC;color:#fff}.btn-blue:hover{background:#003d99}
+    .btn-blue:disabled{background:#999;cursor:not-allowed}
+    .btn-red{background:#dc3545;color:#fff;padding:5px 10px;font-size:12px}.btn-red:hover{background:#b02a37}
+    /* Toast */
+    #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);padding:11px 22px;border-radius:24px;font-size:13px;font-weight:600;color:#fff;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9999;max-width:90%}
+    #toast.show{opacity:1}
+    #toast.success{background:#1a7a3f}
+    #toast.error{background:#c0392b}
+    /* Events table */
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{text-align:left;padding:9px 14px;background:#f8f9fa;color:#555;font-weight:600;font-size:11px;text-transform:uppercase;border-bottom:1px solid #eee}
+    td{padding:10px 14px;border-bottom:1px solid #f0f0f0;color:#333;vertical-align:middle}
+    .ev-row{cursor:pointer}
+    .ev-row:hover td{background:#f0f4ff}
+    .ev-row:last-child td{border-bottom:none}
+    .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+    .badge-green{background:#d4edda;color:#155724}
+    .badge-blue{background:#cce5ff;color:#004085}
+    .empty{text-align:center;padding:32px;color:#aaa;font-size:13px}
+    /* Repeat box */
+    .repeat-box{background:#f8f9fa;border:1px solid #e0e0e0;border-radius:6px;padding:14px;margin-top:10px;display:none}
+    @media(max-width:640px){.grid2,.grid3{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-  <nav>
-    <div class="nav-brand">AFRICON <span>AI FOR GROWTH</span></div>
-    <div class="nav-right">
-      <span id="admin-name"></span>
-      <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
-    </div>
-  </nav>
+<nav>
+  <div class="nav-brand">AFRICON <span>AI FOR GROWTH</span></div>
+  <div class="nav-right">
+    <span id="admin-name" style="opacity:.85"></span>
+    <button class="logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+  </div>
+</nav>
 
-  <div class="main">
-    <div class="summary">
-      <div class="scard"><div class="scard-val" id="s-events">—</div><div class="scard-lbl">Events</div></div>
-      <div class="scard"><div class="scard-val" id="s-total">—</div><div class="scard-lbl">Total Registrants</div></div>
-      <div class="scard"><div class="scard-val" id="s-attended">—</div><div class="scard-lbl">Attended</div></div>
-      <div class="scard"><div class="scard-val" id="s-rate">—</div><div class="scard-lbl">Avg Attendance</div></div>
-    </div>
+<div class="main">
+  <div class="summary">
+    <div class="scard"><div class="scard-val" id="s-events">—</div><div class="scard-lbl">Events</div></div>
+    <div class="scard"><div class="scard-val" id="s-total">—</div><div class="scard-lbl">Registrants</div></div>
+    <div class="scard"><div class="scard-val" id="s-attended">—</div><div class="scard-lbl">Attended</div></div>
+    <div class="scard"><div class="scard-val" id="s-rate">—</div><div class="scard-lbl">Avg Rate</div></div>
+  </div>
 
-    <div class="tabs">
-      <div class="tab active" onclick="switchTab('events')">Events</div>
-      <div class="tab" onclick="switchTab('admins')">Admins</div>
-    </div>
+  <div class="tabs">
+    <div class="tab active" onclick="tab('events')">Events</div>
+    <div class="tab" onclick="tab('admins')">Admins</div>
+  </div>
 
-    <!-- EVENTS TAB -->
-    <div id="pane-events" class="pane active">
-      <div class="section">
-        <div class="section-hd">
-          <h3>Create New Event</h3>
+  <!-- EVENTS PANE -->
+  <div id="pane-events" class="pane active">
+    <div class="card">
+      <div class="card-hd"><h3><i class="fas fa-plus-circle" style="color:#0052CC;margin-right:6px"></i>Create New Event</h3></div>
+      <div class="card-body">
+        <div class="grid2">
+          <div class="field">
+            <label>Event Name *</label>
+            <input id="ev-name" placeholder="e.g. Africon Workshop May 2025" oninput="autoSlug(this.value)">
+          </div>
+          <div class="field">
+            <label>Description <span style="color:#aaa;font-weight:400;text-transform:none">(optional)</span></label>
+            <input id="ev-desc" placeholder="Brief description">
+          </div>
         </div>
-        <div class="section-body">
-          <div id="ev-err" class="err"></div>
-          <div id="ev-ok" class="ok"></div>
-          <div class="frow">
-            <div>
-              <label style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;display:block;margin-bottom:5px">Event Name *</label>
-              <input id="ev-name" placeholder="e.g. Africon Workshop May 2025" oninput="autoSlug()">
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;display:block;margin-bottom:5px">Description (optional)</label>
-              <input id="ev-desc" placeholder="Brief description">
-            </div>
+        <div class="grid3">
+          <div class="field">
+            <label>Start Date *</label>
+            <input id="ev-start" type="date">
           </div>
-          <div class="frow three">
-            <div>
-              <label style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;display:block;margin-bottom:5px">Start Date *</label>
-              <input id="ev-start" type="date">
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;display:block;margin-bottom:5px">End Date <span style="color:#aaa;font-weight:400">(optional)</span></label>
-              <input id="ev-end" type="date">
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;display:block;margin-bottom:5px">URL Slug *</label>
-              <input id="ev-slug" placeholder="auto-generated">
-            </div>
+          <div class="field">
+            <label>End Date <span style="color:#aaa;font-weight:400;text-transform:none">(optional)</span></label>
+            <input id="ev-end" type="date">
           </div>
-          <!-- Repeat section -->
-          <div style="margin-bottom:14px">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#444;font-weight:600">
-              <input type="checkbox" id="ev-repeat-chk" onchange="toggleRepeat()" style="width:16px;height:16px;cursor:pointer">
-              Repeat this event
-            </label>
-            <div id="ev-repeat-opts" style="display:none;margin-top:10px;padding:14px;background:#f8f9fa;border-radius:6px;border:1px solid #e0e0e0">
-              <div class="frow">
-                <div>
-                  <label style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;display:block;margin-bottom:5px">Frequency</label>
-                  <select id="ev-freq">
-                    <option value="weekly">Weekly (every 7 days)</option>
-                    <option value="biweekly">Bi-weekly (every 14 days)</option>
-                    <option value="monthly">Monthly (every 28 days)</option>
-                  </select>
-                </div>
-                <div>
-                  <label style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase;display:block;margin-bottom:5px">Number of occurrences</label>
-                  <select id="ev-count">
-                    <option value="2">2 times</option>
-                    <option value="3" selected>3 times</option>
-                    <option value="4">4 times</option>
-                    <option value="5">5 times</option>
-                    <option value="6">6 times</option>
-                  </select>
-                </div>
+          <div class="field">
+            <label>URL Slug *</label>
+            <input id="ev-slug" placeholder="auto-generated from name">
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom:0">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;font-size:13px">
+            <input type="checkbox" id="ev-repeat" onchange="toggleRepeat()" style="width:15px;height:15px">
+            Repeat this event
+          </label>
+          <div class="repeat-box" id="repeat-box">
+            <div class="grid2">
+              <div class="field" style="margin-bottom:0">
+                <label>Frequency</label>
+                <select id="ev-freq">
+                  <option value="weekly">Weekly (every 7 days)</option>
+                  <option value="biweekly">Bi-weekly (every 14 days)</option>
+                  <option value="monthly">Monthly (every 28 days)</option>
+                </select>
               </div>
-              <p style="font-size:11px;color:#888;margin-top:6px"><i class="fas fa-info-circle"></i> Creates separate events named "Event Name (1st)", "Event Name (2nd)", etc. with auto-incremented slugs.</p>
+              <div class="field" style="margin-bottom:0">
+                <label>Occurrences</label>
+                <select id="ev-count">
+                  <option value="2">2 times</option>
+                  <option value="3" selected>3 times</option>
+                  <option value="4">4 times</option>
+                  <option value="5">5 times</option>
+                  <option value="6">6 times</option>
+                </select>
+              </div>
             </div>
+            <p style="font-size:11px;color:#888;margin-top:8px"><i class="fas fa-info-circle"></i> Creates separate events: "Name (1st)", "Name (2nd)", etc.</p>
           </div>
-          <button class="btn-primary" id="ev-btn" onclick="createEvent()"><i class="fas fa-plus"></i> Create Event</button>
         </div>
-      </div>
 
-      <div class="section">
-        <div class="section-hd"><h3>All Events</h3></div>
-        <div class="section-body" style="padding:0">
-          <div id="events-table-wrap">
-            <div class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
-          </div>
+        <div style="margin-top:18px;display:flex;align-items:center;gap:12px">
+          <button class="btn btn-blue" id="ev-btn" onclick="createEvent()">
+            <i class="fas fa-plus"></i> Create Event
+          </button>
+          <span id="ev-status" style="font-size:13px;color:#666"></span>
         </div>
       </div>
     </div>
 
-    <!-- ADMINS TAB -->
-    <div id="pane-admins" class="pane">
-      <div class="section">
-        <div class="section-hd"><h3>Add New Admin</h3></div>
-        <div class="section-body">
-          <div id="adm-err" class="err"></div>
-          <div id="adm-ok" class="ok"></div>
-          <div class="frow three">
-            <input id="adm-name" placeholder="Full name">
-            <input id="adm-email" type="email" placeholder="Email">
-            <input id="adm-pass" type="password" placeholder="Password">
-          </div>
-          <button class="btn-primary" id="adm-btn" onclick="addAdmin()">Add Admin</button>
-        </div>
-      </div>
-      <div class="section">
-        <div class="section-hd"><h3>Admins</h3></div>
-        <div class="section-body" style="padding:0">
-          <div id="admins-table-wrap"><div class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
-        </div>
-      </div>
+    <div class="card">
+      <div class="card-hd"><h3><i class="fas fa-calendar-alt" style="color:#0052CC;margin-right:6px"></i>All Events <span id="ev-count-badge" style="font-size:12px;color:#999;font-weight:400"></span></h3></div>
+      <div id="ev-list"><div class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
     </div>
   </div>
 
-  <script>
-    const token = localStorage.getItem('token');
-    if (!token) window.location.href = '/admin/login.html';
+  <!-- ADMINS PANE -->
+  <div id="pane-admins" class="pane">
+    <div class="card">
+      <div class="card-hd"><h3><i class="fas fa-user-plus" style="color:#0052CC;margin-right:6px"></i>Add New Admin</h3></div>
+      <div class="card-body">
+        <div class="grid3">
+          <div class="field"><label>Full Name *</label><input id="adm-name" placeholder="Full name"></div>
+          <div class="field"><label>Email *</label><input id="adm-email" type="email" placeholder="email@example.com"></div>
+          <div class="field"><label>Password *</label><input id="adm-pass" type="password" placeholder="Password"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="btn btn-blue" id="adm-btn" onclick="addAdmin()"><i class="fas fa-plus"></i> Add Admin</button>
+          <span id="adm-status" style="font-size:13px;color:#666"></span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><h3><i class="fas fa-users-cog" style="color:#0052CC;margin-right:6px"></i>Admins</h3></div>
+      <div id="adm-list"><div class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+    </div>
+  </div>
+</div>
 
-    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+<div id="toast"></div>
 
-    async function init() {
-      const res = await fetch('/api/auth/me', { headers });
-      if (!res.ok) { localStorage.removeItem('token'); window.location.href = '/admin/login.html'; return; }
-      const me = await res.json();
+<script>
+  const token = localStorage.getItem('token');
+  if (!token) { window.location.replace('/admin/login.html'); }
+
+  const H = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token };
+
+  /* ── INIT ── */
+  async function init() {
+    try {
+      const r = await fetch('/api/auth/me', { headers: H });
+      if (!r.ok) { localStorage.removeItem('token'); window.location.replace('/admin/login.html'); return; }
+      const me = await r.json();
       document.getElementById('admin-name').textContent = me.name;
-      loadEvents(); loadAdmins();
-    }
+      loadEvents();
+      loadAdmins();
+    } catch(e) { toast('Could not connect to server', 'error'); }
+  }
 
-    function switchTab(name) {
-      document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['events','admins'][i] === name));
-      document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
-      document.getElementById('pane-' + name).classList.add('active');
-    }
+  /* ── TABS ── */
+  function tab(name) {
+    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['events','admins'][i] === name));
+    document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+    document.getElementById('pane-' + name).classList.add('active');
+  }
 
-    let eventsData = [];
+  /* ── EVENTS ── */
+  let eventsData = [];
 
-    async function loadEvents() {
-      const res = await fetch('/api/events', { headers });
-      if (!res.ok) return;
-      eventsData = await res.json();
+  async function loadEvents() {
+    try {
+      const r = await fetch('/api/events', { headers: H });
+      if (!r.ok) { toast('Failed to load events', 'error'); return; }
+      eventsData = await r.json();
       renderEvents();
       updateSummary();
+    } catch(e) { toast('Network error loading events', 'error'); }
+  }
+
+  function renderEvents() {
+    const el = document.getElementById('ev-list');
+    document.getElementById('ev-count-badge').textContent = eventsData.length ? `(${eventsData.length})` : '';
+    if (!eventsData.length) {
+      el.innerHTML = '<div class="empty"><i class="fas fa-calendar-plus" style="font-size:24px;display:block;margin-bottom:8px"></i>No events yet. Create your first event above.</div>';
+      return;
     }
+    el.innerHTML = `<table>
+      <thead><tr>
+        <th>Event</th><th>Date</th><th>Registered</th><th>Attended</th><th>Rate</th><th style="width:60px"></th>
+      </tr></thead>
+      <tbody>${eventsData.map(e => {
+        const rate = e.total_attendees > 0 ? Math.round(e.attended_count / e.total_attendees * 100) : 0;
+        return `<tr class="ev-row" onclick="goEvent(${e.id})">
+          <td><strong>${esc(e.name)}</strong><br><small style="color:#999;font-size:11px">${esc(e.slug)}</small></td>
+          <td style="white-space:nowrap">${fmtDate(e.start_date, e.end_date)}</td>
+          <td>${e.total_attendees}</td>
+          <td>${e.attended_count}</td>
+          <td><span class="badge ${rate>=50?'badge-green':'badge-blue'}">${rate}%</span></td>
+          <td><button class="btn-red" onclick="event.stopPropagation();delEvent(${e.id},'${esc(e.name)}')" title="Delete"><i class="fas fa-trash"></i></button></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
 
-    function renderEvents() {
-      const wrap = document.getElementById('events-table-wrap');
-      if (!eventsData.length) { wrap.innerHTML = '<div class="empty">No events yet. Create one above.</div>'; return; }
-      wrap.innerHTML = `<table>
-        <thead><tr>
-          <th>Event</th><th>Date</th><th>Registrants</th><th>Attended</th><th>Rate</th><th>Actions</th>
-        </tr></thead>
-        <tbody>${eventsData.map(e => {
-          const rate = e.total_attendees > 0 ? Math.round((e.attended_count / e.total_attendees) * 100) : 0;
-          return `<tr>
-            <td><strong>${esc(e.name)}</strong><br><small style="color:#999">${esc(e.slug)}</small></td>
-            <td>${fmtDate(e.start_date, e.end_date)}</td>
-            <td>${e.total_attendees}</td>
-            <td>${e.attended_count}</td>
-            <td><span class="badge ${rate>=50?'badge-green':'badge-blue'}">${rate}%</span></td>
-            <td>
-              <button class="btn-sm" onclick="openEvent(${e.id})"><i class="fas fa-edit"></i> Manage</button>
-              <button class="btn-danger" style="margin-left:6px" onclick="deleteEvent(${e.id},'${esc(e.name)}')"><i class="fas fa-trash"></i></button>
-            </td>
-          </tr>`;
-        }).join('')}</tbody>
-      </table>`;
-    }
+  function updateSummary() {
+    const total = eventsData.reduce((s,e) => s + e.total_attendees, 0);
+    const att   = eventsData.reduce((s,e) => s + e.attended_count, 0);
+    document.getElementById('s-events').textContent   = eventsData.length;
+    document.getElementById('s-total').textContent    = total;
+    document.getElementById('s-attended').textContent = att;
+    document.getElementById('s-rate').textContent     = total > 0 ? Math.round(att/total*100)+'%' : '0%';
+  }
 
-    function updateSummary() {
-      const total = eventsData.reduce((s,e) => s + e.total_attendees, 0);
-      const attended = eventsData.reduce((s,e) => s + e.attended_count, 0);
-      const rate = total > 0 ? Math.round((attended/total)*100) : 0;
-      document.getElementById('s-events').textContent = eventsData.length;
-      document.getElementById('s-total').textContent = total;
-      document.getElementById('s-attended').textContent = attended;
-      document.getElementById('s-rate').textContent = rate + '%';
-    }
+  function goEvent(id) { window.location.href = '/admin/event.html?id=' + id; }
 
-    function autoSlug() {
-      const name = document.getElementById('ev-name').value;
-      const slug = name.toLowerCase()
-        .replace(/[^a-z0-9\s]/g, '')
-        .trim()
-        .replace(/\s+/g, '-');
-      document.getElementById('ev-slug').value = slug;
-    }
+  async function delEvent(id, name) {
+    if (!confirm(`Delete "${name}"?\nThis will remove all attendees too.`)) return;
+    const r = await fetch('/api/events/' + id, { method: 'DELETE', headers: H });
+    if (r.ok) { toast('Event deleted', 'success'); loadEvents(); }
+    else toast('Failed to delete event', 'error');
+  }
 
-    function toggleRepeat() {
-      const on = document.getElementById('ev-repeat-chk').checked;
-      document.getElementById('ev-repeat-opts').style.display = on ? 'block' : 'none';
-    }
+  /* ── CREATE EVENT ── */
+  function autoSlug(val) {
+    document.getElementById('ev-slug').value = val.toLowerCase()
+      .replace(/[^a-z0-9\s]/g,'').trim().replace(/\s+/g,'-');
+  }
 
-    async function createEvent() {
-      const name  = document.getElementById('ev-name').value.trim();
-      const start = document.getElementById('ev-start').value;
-      const end   = document.getElementById('ev-end').value;
-      const slug  = document.getElementById('ev-slug').value.trim();
-      const desc  = document.getElementById('ev-desc').value.trim();
-      const btn   = document.getElementById('ev-btn');
-      hide('ev-err'); hide('ev-ok');
+  function toggleRepeat() {
+    document.getElementById('repeat-box').style.display =
+      document.getElementById('ev-repeat').checked ? 'block' : 'none';
+  }
 
-      if (!name)  { show('ev-err', 'Event name is required'); return; }
-      if (!start) { show('ev-err', 'Start date is required'); return; }
-      if (!slug)  { show('ev-err', 'URL slug is required — type the event name to auto-generate it'); return; }
-      if (end && end < start) { show('ev-err', 'End date cannot be before start date'); return; }
+  async function createEvent() {
+    const name  = document.getElementById('ev-name').value.trim();
+    const start = document.getElementById('ev-start').value;
+    const end   = document.getElementById('ev-end').value;
+    const slug  = document.getElementById('ev-slug').value.trim();
+    const desc  = document.getElementById('ev-desc').value.trim();
+    const btn   = document.getElementById('ev-btn');
+    const status = document.getElementById('ev-status');
+    status.textContent = '';
 
-      const useRepeat = document.getElementById('ev-repeat-chk').checked;
-      const repeat = useRepeat ? {
-        frequency: document.getElementById('ev-freq').value,
-        count: parseInt(document.getElementById('ev-count').value),
-      } : null;
+    if (!name)  { toast('Please enter an event name', 'error'); document.getElementById('ev-name').focus(); return; }
+    if (!start) { toast('Please select a start date', 'error'); document.getElementById('ev-start').focus(); return; }
+    if (!slug)  { toast('Slug is empty — type the event name first', 'error'); return; }
+    if (end && end < start) { toast('End date cannot be before start date', 'error'); return; }
 
-      btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating…';
+    const useRepeat = document.getElementById('ev-repeat').checked;
+    const repeat = useRepeat ? {
+      frequency: document.getElementById('ev-freq').value,
+      count: parseInt(document.getElementById('ev-count').value),
+    } : null;
 
-      try {
-        const res = await fetch('/api/events', {
-          method: 'POST', headers,
-          body: JSON.stringify({ name, description: desc, start_date: start, end_date: end || null, slug, repeat }),
-        });
-        const data = await res.json();
-        if (!res.ok) { show('ev-err', data.error || 'Failed to create event'); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating…';
 
-        const created = Array.isArray(data) ? data : [data];
-        show('ev-ok', created.length === 1
-          ? `Event "${created[0].name}" created successfully!`
-          : `${created.length} recurring events created successfully!`);
-        ['ev-name','ev-start','ev-end','ev-slug','ev-desc'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('ev-repeat-chk').checked = false;
-        toggleRepeat();
-        loadEvents();
-      } catch (e) {
-        show('ev-err', 'Network error — please try again');
-      } finally {
-        btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus"></i> Create Event';
-      }
-    }
+    try {
+      const r = await fetch('/api/events', {
+        method: 'POST', headers: H,
+        body: JSON.stringify({ name, description: desc, start_date: start, end_date: end||null, slug, repeat }),
+      });
+      const data = await r.json();
+      if (!r.ok) { toast(data.error || 'Failed to create event', 'error'); return; }
 
-    function fmtDate(start, end) {
-      const s = new Date(start).toLocaleDateString();
-      if (!end) return s;
-      const e = new Date(end).toLocaleDateString();
-      return s === e ? s : `${s} – ${e}`;
-    }
-
-    async function deleteEvent(id, name) {
-      if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
-      await fetch(`/api/events/${id}`, { method:'DELETE', headers });
+      const created = Array.isArray(data) ? data : [data];
+      toast(created.length === 1 ? `"${created[0].name}" created!` : `${created.length} events created!`, 'success');
+      ['ev-name','ev-start','ev-end','ev-slug','ev-desc'].forEach(id => document.getElementById(id).value='');
+      document.getElementById('ev-repeat').checked = false; toggleRepeat();
       loadEvents();
+    } catch(e) {
+      toast('Network error — please try again', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-plus"></i> Create Event';
     }
+  }
 
-    function openEvent(id) {
-      window.location.href = `/admin/event.html?id=${id}`;
-    }
+  function fmtDate(s, e) {
+    const fmt = d => new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    if (!e) return fmt(s);
+    const fs = fmt(s), fe = fmt(e);
+    return fs === fe ? fs : fs + ' – ' + fe;
+  }
 
-    async function loadAdmins() {
-      const res = await fetch('/api/admins', { headers });
-      if (!res.ok) return;
-      const admins = await res.json();
-      const wrap = document.getElementById('admins-table-wrap');
-      if (!admins.length) { wrap.innerHTML = '<div class="empty">No admins found.</div>'; return; }
-      wrap.innerHTML = `<table>
-        <thead><tr><th>Name</th><th>Email</th><th>Added</th></tr></thead>
+  /* ── ADMINS ── */
+  async function loadAdmins() {
+    try {
+      const r = await fetch('/api/admins', { headers: H });
+      if (!r.ok) return;
+      const admins = await r.json();
+      const el = document.getElementById('adm-list');
+      if (!admins.length) { el.innerHTML = '<div class="empty">No admins found.</div>'; return; }
+      el.innerHTML = `<table>
+        <thead><tr><th>Name</th><th>Email / Username</th><th>Added</th></tr></thead>
         <tbody>${admins.map(a => `<tr>
-          <td>${esc(a.name)}</td>
-          <td>${esc(a.email)}</td>
+          <td><strong>${esc(a.name)}</strong></td>
+          <td>${esc(a.email||a.username||'—')}</td>
           <td>${new Date(a.created_at).toLocaleDateString()}</td>
         </tr>`).join('')}</tbody>
       </table>`;
-    }
+    } catch(e) {}
+  }
 
-    async function addAdmin() {
-      const name  = document.getElementById('adm-name').value.trim();
-      const email = document.getElementById('adm-email').value.trim();
-      const pass  = document.getElementById('adm-pass').value;
-      const btn   = document.getElementById('adm-btn');
-      hide('adm-err'); hide('adm-ok');
+  async function addAdmin() {
+    const name = document.getElementById('adm-name').value.trim();
+    const email= document.getElementById('adm-email').value.trim();
+    const pass = document.getElementById('adm-pass').value;
+    const btn  = document.getElementById('adm-btn');
+    const status = document.getElementById('adm-status');
+    status.textContent = '';
 
-      if (!name || !email || !pass) { show('adm-err', 'All fields required'); return; }
+    if (!name || !email || !pass) { toast('All fields are required', 'error'); return; }
 
-      btn.disabled = true; btn.textContent = 'Adding…';
-      const res = await fetch('/api/admins', { method:'POST', headers, body: JSON.stringify({name,email,password:pass}) });
-      const data = await res.json();
-      btn.disabled = false; btn.textContent = 'Add Admin';
-      if (!res.ok) { show('adm-err', data.error); return; }
-      show('adm-ok', `${data.name} added as admin.`);
-      ['adm-name','adm-email','adm-pass'].forEach(id => document.getElementById(id).value = '');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding…';
+    try {
+      const r = await fetch('/api/admins', { method:'POST', headers:H, body: JSON.stringify({name,email,password:pass}) });
+      const data = await r.json();
+      if (!r.ok) { toast(data.error || 'Failed to add admin', 'error'); return; }
+      toast(`${data.name} added as admin`, 'success');
+      ['adm-name','adm-email','adm-pass'].forEach(id => document.getElementById(id).value='');
       loadAdmins();
+    } catch(e) {
+      toast('Network error', 'error');
+    } finally {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus"></i> Add Admin';
     }
+  }
 
-    async function logout() {
-      await fetch('/api/auth/logout', { method:'POST', headers });
-      localStorage.removeItem('token');
-      window.location.href = '/admin/login.html';
-    }
+  /* ── AUTH ── */
+  async function logout() {
+    await fetch('/api/auth/logout', { method:'POST', headers:H });
+    localStorage.removeItem('token');
+    window.location.replace('/admin/login.html');
+  }
 
-    function show(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block'; }
-    function hide(id) { document.getElementById(id).style.display = 'none'; }
-    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  /* ── HELPERS ── */
+  let toastTimer;
+  function toast(msg, type) {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.className = 'show ' + type;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+  }
 
-    init();
-  </script>
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  init();
+</script>
 </body>
 </html>
