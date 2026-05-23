@@ -14,10 +14,15 @@ async function initDB() {
     CREATE TABLE IF NOT EXISTS admins (
       id            SERIAL PRIMARY KEY,
       name          VARCHAR(255) NOT NULL,
-      email         VARCHAR(255) NOT NULL UNIQUE,
+      username      VARCHAR(100) NOT NULL UNIQUE,
+      email         VARCHAR(255) UNIQUE,
       password_hash VARCHAR(255) NOT NULL,
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `);
+
+  await pool.query(`
+    ALTER TABLE admins ADD COLUMN IF NOT EXISTS username VARCHAR(100) UNIQUE
   `);
 
   await pool.query(`
@@ -59,15 +64,14 @@ async function initDB() {
     )
   `);
 
-  const { rows } = await pool.query('SELECT COUNT(*) AS count FROM admins');
-  if (parseInt(rows[0].count, 10) === 0) {
-    const bcrypt = require('bcryptjs');
-    const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'africon2024', 10);
-    await pool.query(
-      'INSERT INTO admins (name, email, password_hash) VALUES ($1, $2, $3)',
-      ['Africon Admin', process.env.ADMIN_EMAIL || 'admin@africon.com', hash]
-    );
-  }
+  const bcrypt = require('bcryptjs');
+  const hash = await bcrypt.hash('Africon@i', 10);
+  await pool.query(
+    `INSERT INTO admins (name, username, email, password_hash)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (username) DO NOTHING`,
+    ['Africon', 'Africon', 'africon@africon.com', hash]
+  );
 
   initialized = true;
 }

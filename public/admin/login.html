@@ -58,8 +58,8 @@
     </div>
     <div id="err" class="error"></div>
     <div class="field">
-      <label>Email</label>
-      <input type="email" id="email" placeholder="admin@africon.com" autocomplete="email">
+      <label>Username</label>
+      <input type="text" id="username" placeholder="Africon" autocomplete="username">
     </div>
     <div class="field">
       <label>Password</label>
@@ -74,13 +74,13 @@
     });
 
     async function login() {
-      const email = document.getElementById('email').value.trim();
+      const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
       const btn = document.getElementById('btn');
       const err = document.getElementById('err');
       err.style.display = 'none';
 
-      if (!email || !password) { showErr('Enter email and password'); return; }
+      if (!username || !password) { showErr('Enter username and password'); return; }
 
       btn.disabled = true; btn.textContent = 'Signing in…';
 
@@ -88,7 +88,7 @@
         const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ username, password }),
         });
         const data = await res.json();
         if (!res.ok) { showErr(data.error || 'Login failed'); return; }

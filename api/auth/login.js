@@ -8,18 +8,21 @@ module.exports = async (req, res) => {
 
   try {
     await initDB();
-    const { email, password } = req.body || {};
-    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+    const { username, password } = req.body || {};
+    if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
 
-    const { rows } = await pool.query('SELECT * FROM admins WHERE email = $1', [email.toLowerCase()]);
+    const { rows } = await pool.query(
+      'SELECT * FROM admins WHERE username = $1 OR email = $1',
+      [username]
+    );
     if (!rows.length || !(await bcrypt.compare(password, rows[0].password_hash))) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const admin = rows[0];
-    const token = signToken({ id: admin.id, email: admin.email, name: admin.name });
+    const token = signToken({ id: admin.id, username: admin.username, name: admin.name });
     res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`);
-    res.status(200).json({ token, admin: { id: admin.id, name: admin.name, email: admin.email } });
+    res.status(200).json({ token, admin: { id: admin.id, name: admin.name, username: admin.username } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
