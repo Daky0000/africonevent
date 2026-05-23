@@ -1,0 +1,11 @@
+{
+  "name": "africon-attendance",
+  "version": "1.0.0",
+  "description": "Africon Event Attendance Tracker",
+  "engines": {
+    "node": "18.x"
+  },
+  "dependencies": {
+    "pg": "^8.11.3"
+  }
+}

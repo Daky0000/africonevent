@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event Attendance Tracker</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+      background: linear-gradient(135deg, #0052CC 0%, #1a7a3f 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      padding: 40px;
+    }
+
+    h1 { color: #333; margin-bottom: 10px; font-size: 28px; }
+    .subtitle { color: #666; margin-bottom: 30px; font-size: 14px; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      border: 1px solid #e0e0e0;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #999;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .stat-number { font-size: 32px; font-weight: bold; color: #0052CC; }
+
+    .add-attendee {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .add-attendee h3 { color: #333; margin-bottom: 15px; font-size: 16px; }
+
+    .form-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr 120px;
+      gap: 10px;
+    }
+
+    input[type="text"], input[type="tel"] {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    input[type="text"]:focus, input[type="tel"]:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    }
+
+    button {
+      padding: 10px 20px;
+      background: #0052CC;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: background 0.3s;
+    }
+
+    button:hover { background: #003d99; }
+    button:disabled { background: #999; cursor: not-allowed; }
+
+    .search-box { margin-bottom: 20px; }
+
+    .search-box input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .attendee-list { display: grid; gap: 10px; }
+
+    .attendee-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+      user-select: none;
+    }
+
+    .attendee-item:hover { border-color: #667eea; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1); }
+    .attendee-item.attended { background: #d4edda; border-color: #28a745; }
+    .attendee-item.not-attended { background: #f8d7da; border-color: #dc3545; }
+    .attendee-item.loading { opacity: 0.5; pointer-events: none; }
+
+    .checkbox { width: 20px; height: 20px; cursor: pointer; flex-shrink: 0; }
+
+    .attendee-info { flex: 1; min-width: 0; }
+    .attendee-name { font-weight: 600; color: #333; margin-bottom: 4px; font-size: 14px; }
+    .attendee-phone { font-size: 12px; color: #999; }
+    .attendee-icon { font-size: 18px; flex-shrink: 0; }
+    .attended .attendee-icon { color: #28a745; }
+    .not-attended .attendee-icon { color: #dc3545; }
+
+    .state-msg {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+      font-size: 14px;
+    }
+
+    .state-msg i { font-size: 32px; display: block; margin-bottom: 12px; }
+
+    .error-banner {
+      background: #f8d7da;
+      border: 1px solid #dc3545;
+      color: #721c24;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .privacy-notice {
+      margin-top: 40px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-top: 1px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .privacy-notice h4 { color: #333; font-size: 13px; margin-bottom: 8px; font-weight: 600; }
+
+    @media (max-width: 600px) {
+      .container { padding: 20px; }
+      h1 { font-size: 22px; }
+      .form-group { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="text-align:center;margin-bottom:30px;padding-bottom:20px;border-bottom:2px solid #0052CC;">
+      <div style="font-size:32px;font-weight:bold;color:#0052CC;letter-spacing:2px;">AFRICON</div>
+      <div style="font-size:14px;color:#6FCF97;letter-spacing:1px;margin-top:4px;">AI FOR GROWTH</div>
+    </div>
+
+    <h1>&#x1F4CB; Event Attendance Tracker</h1>
+    <p class="subtitle">Track attendance for your event in real-time</p>
+
+    <div id="error-banner" class="error-banner"></div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">Attended</div>
+        <div class="stat-number" id="attended-count">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Not Attended</div>
+        <div class="stat-number" id="not-attended-count">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Attendance %</div>
+        <div class="stat-number" id="attendance-percent">—</div>
+      </div>
+    </div>
+
+    <div class="add-attendee">
+      <h3>&#x2795; Add New Attendee</h3>
+      <div class="form-group">
+        <input type="text" id="new-name" placeholder="Full Name" autocomplete="off">
+        <input type="tel" id="new-phone" placeholder="Phone Number" autocomplete="off">
+        <button id="add-btn" onclick="addAttendee()">Add</button>
+      </div>
+    </div>
+
+    <div class="search-box">
+      <input type="text" id="search" placeholder="&#x1F50D; Search by name or phone...">
+    </div>
+
+    <div id="attendees-list" class="attendee-list"></div>
+    <div id="list-state" class="state-msg">
+      <i class="fas fa-spinner fa-spin"></i>
+      Loading attendees…
+    </div>
+
+    <div class="privacy-notice">
+      <h4>&#x1F512; DATA &amp; PRIVACY NOTICE</h4>
+      <p>Africon respects your privacy. Your information is used for training, certification, and communication, and will not be shared without your consent.</p>
+    </div>
+  </div>
+
+  <script>
+    let attendees = [];
+
+    function showError(msg) {
+      const el = document.getElementById('error-banner');
+      el.textContent = msg;
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 5000);
+    }
+
+    async function loadAttendees() {
+      try {
+        const res = await fetch('/api/attendees');
+        if (!res.ok) throw new Error(`Server error ${res.status}`);
+        attendees = await res.json();
+        renderAttendees();
+        updateStats();
+      } catch (e) {
+        document.getElementById('list-state').innerHTML =
+          '<i class="fas fa-exclamation-triangle" style="color:#dc3545"></i>Failed to load attendees. Please refresh.';
+        showError(e.message);
+      }
+    }
+
+    async function addAttendee() {
+      const nameEl  = document.getElementById('new-name');
+      const phoneEl = document.getElementById('new-phone');
+      const btn     = document.getElementById('add-btn');
+      const name    = nameEl.value.trim();
+      const phone   = phoneEl.value.trim();
+
+      if (!name || !phone) {
+        alert('Please enter both name and phone number');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Adding…';
+
+      try {
+        const res = await fetch('/api/attendees', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to add');
+        }
+        const newAttendee = await res.json();
+        attendees.push(newAttendee);
+        nameEl.value  = '';
+        phoneEl.value = '';
+        nameEl.focus();
+        renderAttendees(document.getElementById('search').value);
+        updateStats();
+      } catch (e) {
+        showError(e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Add';
+      }
+    }
+
+    async function toggleAttendee(id) {
+      const item = document.querySelector(`[data-id="${id}"]`);
+      if (item) item.classList.add('loading');
+
+      try {
+        const res = await fetch('/api/attendance', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id }),
+        });
+        if (!res.ok) throw new Error('Failed to update');
+        const updated = await res.json();
+        const idx = attendees.findIndex(a => a.id === id);
+        if (idx !== -1) attendees[idx] = updated;
+        renderAttendees(document.getElementById('search').value);
+        updateStats();
+      } catch (e) {
+        showError(e.message);
+        if (item) item.classList.remove('loading');
+      }
+    }
+
+    function renderAttendees(filter = '') {
+      const list       = document.getElementById('attendees-list');
+      const stateMsg   = document.getElementById('list-state');
+      list.innerHTML   = '';
+
+      const filtered = attendees.filter(a =>
+        a.name.toLowerCase().includes(filter.toLowerCase()) ||
+        a.phone.includes(filter)
+      );
+
+      if (filtered.length === 0) {
+        stateMsg.innerHTML = '<i class="fas fa-search"></i>' +
+          (filter ? 'No matches found.' : 'No attendees yet. Add one above!');
+        stateMsg.style.display = 'block';
+        return;
+      }
+
+      stateMsg.style.display = 'none';
+
+      filtered.forEach(attendee => {
+        const item = document.createElement('div');
+        item.className = `attendee-item ${attendee.attended ? 'attended' : 'not-attended'}`;
+        item.dataset.id = attendee.id;
+        item.onclick = () => toggleAttendee(attendee.id);
+
+        item.innerHTML = `
+          <input type="checkbox" class="checkbox" ${attendee.attended ? 'checked' : ''}
+            onclick="event.stopPropagation(); toggleAttendee(${attendee.id})">
+          <div class="attendee-info">
+            <div class="attendee-name">${escapeHtml(attendee.name)}</div>
+            <div class="attendee-phone">${escapeHtml(attendee.phone)}</div>
+          </div>
+          <div class="attendee-icon">
+            <i class="fas ${attendee.attended ? 'fa-check-circle' : 'fa-circle'}"></i>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function updateStats() {
+      const total       = attendees.length;
+      const attended    = attendees.filter(a => a.attended).length;
+      const notAttended = total - attended;
+      const percent     = total === 0 ? 0 : Math.round((attended / total) * 100);
+
+      document.getElementById('attended-count').textContent     = attended;
+      document.getElementById('not-attended-count').textContent = notAttended;
+      document.getElementById('attendance-percent').textContent  = percent + '%';
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+    }
+
+    document.getElementById('search').addEventListener('input', e => {
+      renderAttendees(e.target.value);
+    });
+
+    document.getElementById('new-name').addEventListener('keypress', e => {
+      if (e.key === 'Enter') document.getElementById('new-phone').focus();
+    });
+
+    document.getElementById('new-phone').addEventListener('keypress', e => {
+      if (e.key === 'Enter') addAttendee();
+    });
+
+    loadAttendees();
+  </script>
+</body>
+</html>
