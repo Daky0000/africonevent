@@ -101,13 +101,33 @@ module.exports = async (req, res) => {
           await logAttempt(id, attendee_id, ip, true);
         }
 
-        if (attendee.attended) return res.status(200).json({ id: attendee.id, name: attendee.name, attended: true });
-
-        const { rows } = await pool.query(
-          'UPDATE attendees SET attended = TRUE, attended_at = NOW() WHERE id = $1 AND event_id = $2 RETURNING id, name, attended',
+        // Attendance is recorded per day, so a multi-day event ticks the day the
+        // person actually showed up rather than a single event-wide flag.
+        await pool.query(
+          `INSERT INTO attendance_days (attendee_id, event_id, day_date)
+           VALUES ($1, $2, CURRENT_DATE)
+           ON CONFLICT (attendee_id, day_date) DO NOTHING`,
           [attendee_id, id]
         );
-        return res.status(200).json(rows[0]);
+
+        const { rows } = await pool.query(
+          `UPDATE attendees
+           SET attended = TRUE, attended_at = COALESCE(attended_at, NOW())
+           WHERE id = $1 AND event_id = $2
+           RETURNING id, name, attended`,
+          [attendee_id, id]
+        );
+
+        const { rows: dayRows } = await pool.query(
+          `SELECT day_date::text FROM attendance_days WHERE attendee_id = $1 ORDER BY day_date`,
+          [attendee_id]
+        );
+
+        return res.status(200).json({
+          ...rows[0],
+          attended_today: true,
+          attendance_days: dayRows.map(r => r.day_date),
+        });
       }
 
       // Admin: full toggle — per-day if day_date provided, otherwise legacy boolean toggle

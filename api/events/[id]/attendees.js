@@ -16,6 +16,10 @@ const FULL_LIST_SQL = `
 // just needs to know which verification methods are available for each person.
 const PUBLIC_LIST_SQL = `
   SELECT a.id, a.name, a.attended,
+    (
+      EXISTS (SELECT 1 FROM attendance_days d WHERE d.attendee_id = a.id AND d.day_date = CURRENT_DATE)
+      OR (a.attended AND a.attended_at::date = CURRENT_DATE)
+    ) AS attended_today,
     (a.phone IS NOT NULL AND a.phone <> '') AS has_phone,
     (a.email IS NOT NULL AND a.email <> '') AS has_email,
     COALESCE(json_agg(ad.day_date::text ORDER BY ad.day_date) FILTER (WHERE ad.day_date IS NOT NULL), '[]') AS attendance_days

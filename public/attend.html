@@ -392,9 +392,10 @@
       document.getElementById('code-gate').style.display = 'none';
       document.getElementById('attend-view').style.display = 'block';
 
-      // Check if this browser already marked attendance for this event
+      // Check if this browser already marked attendance for this event today
       try {
-        const stored = localStorage.getItem(`africon_attended_${eventId}`);
+        localStorage.removeItem(`africon_attended_${eventId}`); // legacy event-wide lock
+        const stored = localStorage.getItem(todayKey());
         if (stored) {
           const { name } = JSON.parse(stored);
           showCongratsModal(name);
@@ -432,14 +433,15 @@
 
       list.innerHTML = filtered.map(a => {
         const initials = a.name.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
-        const sub      = a.attended ? '✓ Attendance recorded' : 'Tap to verify and check in';
-        return `<div class="at-item ${a.attended ? 'attended' : 'not-attended clickable'}" data-id="${a.id}" ${a.attended ? '' : `onclick="startVerify(${a.id})"`}>
+        const here     = attendedToday(a);
+        const sub      = here ? '✓ Attendance recorded for today' : 'Tap to verify and check in';
+        return `<div class="at-item ${here ? 'attended' : 'not-attended clickable'}" data-id="${a.id}" ${here ? '' : `onclick="startVerify(${a.id})"`}>
           <div class="avatar">${esc(initials)}</div>
           <div class="at-info">
             <div class="at-name">${esc(a.name)}</div>
             <div class="at-sub">${esc(sub)}</div>
           </div>
-          <div class="at-status"><i class="fas ${a.attended ? 'fa-check-circle' : 'fa-circle'}"></i></div>
+          <div class="at-status"><i class="fas ${here ? 'fa-check-circle' : 'fa-circle'}"></i></div>
         </div>`;
       }).join('');
     }
@@ -450,7 +452,7 @@
 
     function startVerify(id) {
       const a = attendees.find(x => x.id === id);
-      if (!a || a.attended) return; // already marked — no action
+      if (!a || attendedToday(a)) return; // already marked today — no action
 
       pendingAttendee = a;
       chosenMethod    = null;
@@ -565,7 +567,7 @@
 
         closeVerify();
         // Lock this browser so refresh can't re-open the list
-        localStorage.setItem(`africon_attended_${eventId}`, JSON.stringify({ name: data.name }));
+        localStorage.setItem(todayKey(), JSON.stringify({ name: data.name }));
         showCongratsModal(data.name);
       } catch {
         if (usingModal) showVerifyError('Network error. Please try again.');
@@ -578,7 +580,7 @@
 
     function updateStats() {
       const total    = attendees.length;
-      const attended = attendees.filter(a => a.attended).length;
+      const attended = attendees.filter(a => attendedToday(a)).length;
       const rate     = total === 0 ? 0 : Math.round((attended / total) * 100);
       document.getElementById('s-attended').textContent = attended;
       document.getElementById('s-total').textContent    = total;
@@ -615,6 +617,16 @@
 
     function closeCongratsModal() {
       document.getElementById('congrats-overlay').classList.remove('open');
+    }
+
+    // The public page tracks attendance for TODAY, so a multi-day event lets
+    // each person check in again on every day they attend.
+    function attendedToday(a) {
+      return a.attended_today === true;
+    }
+
+    function todayKey() {
+      return `africon_attended_${eventId}_${new Date().toLocaleDateString('en-CA')}`;
     }
 
     function esc(s) {
