@@ -1,5 +1,6 @@
 const { pool, initDB } = require('../../_db');
 const { requireAuth, getToken, verifyToken } = require('../../_auth');
+const { toLocalPhone } = require('../../_contact');
 
 const FULL_LIST_SQL = `
   SELECT a.*,
@@ -49,7 +50,7 @@ module.exports = async (req, res) => {
         for (const a of body.attendees.filter(x => x.name)) {
           const { rows } = await pool.query(
             'INSERT INTO attendees (event_id, name, phone, email) VALUES ($1,$2,$3,$4) RETURNING *',
-            [id, a.name.trim(), a.phone || null, a.email || null]
+            [id, a.name.trim(), toLocalPhone(a.phone) || null, (a.email || '').trim() || null]
           );
           if (rows[0]) inserted.push(rows[0]);
         }
@@ -60,7 +61,7 @@ module.exports = async (req, res) => {
       if (!name) return res.status(400).json({ error: 'name is required' });
       const { rows } = await pool.query(
         'INSERT INTO attendees (event_id, name, phone, email) VALUES ($1,$2,$3,$4) RETURNING *',
-        [id, name.trim(), phone || null, email || null]
+        [id, name.trim(), toLocalPhone(phone) || null, (email || '').trim() || null]
       );
       return res.status(201).json(rows[0]);
     }

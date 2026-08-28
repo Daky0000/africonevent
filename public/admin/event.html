@@ -634,6 +634,20 @@
     reader.readAsText(file);
   }
 
+  // Mirrors toLocalPhone() in api/_contact.js so the import preview shows
+  // exactly what will be stored: +233244123456 and 244123456 both become 0244123456.
+  function toLocalPhone(value) {
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw) return '';
+    const d = raw.replace(/\D/g, '');
+    if (!d) return raw;
+    if (/^00233\d{9}$/.test(d)) return '0' + d.slice(5);
+    if (/^233\d{9}$/.test(d))   return '0' + d.slice(3);
+    if (/^0\d{9}$/.test(d))     return d;
+    if (/^\d{9}$/.test(d))      return '0' + d;
+    return raw;
+  }
+
   function parseCSV(text) {
     const lines = text.trim().split(/\r?\n/);
     if (lines.length < 2) return [];
@@ -643,7 +657,7 @@
     return lines.slice(1).map(line => {
       const parts = line.split(',').map(v => v.trim().replace(/^"|"$/g,''));
       const name = parts[ni]||''; if (!name) return null;
-      return { name, phone: pi>=0?parts[pi]||'':'', email: ei>=0?parts[ei]||'':'' };
+      return { name, phone: toLocalPhone(pi>=0?parts[pi]||'':''), email: ei>=0?parts[ei]||'':'' };
     }).filter(Boolean);
   }
 

@@ -83,6 +83,24 @@ async function initDB() {
     )
   `);
 
+  // Store Ghana numbers in the local trunk form: +233244123456 -> 0244123456.
+  // Only rows that are recognisably Ghanaian are touched; foreign numbers are left alone.
+  await pool.query(`
+    UPDATE attendees
+    SET phone = '0' || RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 9)
+    WHERE phone IS NOT NULL
+      AND REGEXP_REPLACE(phone, '[^0-9]', '', 'g') ~ '^(00233|233)[0-9]{9}$'
+  `);
+
+  // Tidy the remaining local numbers so spacing/punctuation can't cause a mismatch
+  await pool.query(`
+    UPDATE attendees
+    SET phone = REGEXP_REPLACE(phone, '[^0-9]', '', 'g')
+    WHERE phone IS NOT NULL
+      AND phone <> REGEXP_REPLACE(phone, '[^0-9]', '', 'g')
+      AND REGEXP_REPLACE(phone, '[^0-9]', '', 'g') ~ '^0[0-9]{9}$'
+  `);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS attendance_ips (
       id          SERIAL PRIMARY KEY,
