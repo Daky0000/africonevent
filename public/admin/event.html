@@ -76,6 +76,22 @@
     .absent .at-icon{color:#ddd}
     .at-del{background:none;border:none;color:#ccc;cursor:pointer;font-size:13px;padding:3px 6px;border-radius:4px}
     .at-del:hover{background:#fdecea;color:#dc3545}
+    /* Bulk selection */
+    .btn-red{background:#c0392b;color:#fff}.btn-red:hover{background:#a33025}
+    .btn-red:disabled{background:#e0b4ae;cursor:not-allowed}
+    .bulk-bar{display:none;align-items:center;flex-wrap:wrap;gap:10px;padding:10px 14px;margin-bottom:14px;background:#fff8f0;border:1px solid #f0d9c0;border-radius:8px}
+    .bulk-bar.open{display:flex}
+    .bulk-check{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#555;cursor:pointer}
+    .bulk-check input{width:16px;height:16px;cursor:pointer}
+    .bulk-count{font-size:12px;font-weight:700;color:#c0392b;margin-left:auto}
+    .at-select{width:17px;height:17px;flex-shrink:0;cursor:pointer;accent-color:#c0392b}
+    .at-item.selected{background:#fdecea;border-color:#c0392b}
+    .at-item.selected:hover{background:#fadbd8}
+    .selecting .at-item{cursor:pointer}
+    .day-dots{display:flex;gap:4px;align-items:center;flex-shrink:0;flex-wrap:wrap}
+    .day-dot{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+    .day-dot-on{background:#28a745}
+    .day-dot-off{background:#dc3545}
     /* Stats */
     .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
     .stat{background:#f8f9fa;border:1px solid #eee;border-radius:8px;padding:16px;text-align:center}
@@ -209,12 +225,34 @@
     <div class="card">
       <div class="card-hd">
         <h3><i class="fas fa-list" style="color:#0052CC;margin-right:6px"></i>Participants <span id="at-count" style="font-size:12px;color:#999;font-weight:400"></span></h3>
-        <button class="btn btn-green" id="mark-all-btn" onclick="markAllAttended()" style="padding:6px 14px;font-size:12px">
-          <i class="fas fa-check-double"></i> Mark All Attended
-        </button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" id="select-mode-btn" onclick="toggleSelectMode()" style="padding:6px 14px;font-size:12px;background:#eef1f5;color:#444">
+            <i class="fas fa-check-square"></i> Select
+          </button>
+          <button class="btn btn-green" id="mark-all-btn" onclick="markAllAttended()" style="padding:6px 14px;font-size:12px">
+            <i class="fas fa-check-double"></i> Mark All Attended
+          </button>
+        </div>
       </div>
       <div class="card-body">
         <div id="day-tabs" class="day-tabs"></div>
+
+        <!-- Bulk selection bar -->
+        <div id="bulk-bar" class="bulk-bar">
+          <label class="bulk-check">
+            <input type="checkbox" id="bulk-select-all" onchange="toggleSelectAllVisible(this.checked)">
+            Select all shown
+          </label>
+          <button class="btn btn-red" id="bulk-delete-btn" onclick="bulkDelete()" style="padding:6px 14px;font-size:12px" disabled>
+            <i class="fas fa-trash"></i> Delete Selected
+          </button>
+          <button class="btn" onclick="deleteAllParticipants()" style="padding:6px 14px;font-size:12px;background:#fff;color:#c0392b;border:1px solid #e0b4ae">
+            <i class="fas fa-triangle-exclamation"></i> Delete All
+          </button>
+          <button class="btn" onclick="toggleSelectMode()" style="padding:6px 14px;font-size:12px;background:#eee;color:#555">Done</button>
+          <span class="bulk-count" id="bulk-count">0 selected</span>
+        </div>
+
         <div class="search-wrap">
           <i class="fas fa-search"></i>
           <input id="search" placeholder="Search by name, phone or email…" oninput="renderList()">
@@ -252,8 +290,12 @@
 
   let eventData       = null;
   let attendees       = [];
+  let eventDays       = []; // [{day, dateStr, label}] for multi-day events
   let csvRows         = [];
   let activeDayFilter = null; // null = All, or "YYYY-MM-DD" for a specific day
+  let selectMode      = false;      // bulk-selection mode for deleting participants
+  let selected        = new Set();  // ids ticked while in select mode
+  let visibleIds      = [];         // ids currently passing the search filter
 
   /* ── INIT ── */
   async function init() {
@@ -303,16 +345,17 @@
     const total = Math.round((end - start) / 86400000) + 1;
     if (total <= 1) return;
 
-    const days = [];
+    eventDays = [];
     for (let i = 0; i < total; i++) {
       const d = new Date(start);
       d.setDate(d.getDate() + i);
-      days.push({
+      eventDays.push({
         day:     i + 1,
         dateStr: d.toLocaleDateString('en-CA'),
         label:   d.toLocaleDateString('en-GB', { day:'numeric', month:'short' }),
       });
     }
+    const days = eventDays;
 
     const container = document.getElementById('day-tabs');
     container.innerHTML =
@@ -335,8 +378,7 @@
   // Returns whether attendee counts as "attended" for the currently active day tab
   function attendedOnDay(a) {
     if (!activeDayFilter) return a.attended;
-    if (!a.attended || !a.attended_at) return false;
-    return new Date(a.attended_at).toLocaleDateString('en-CA') === activeDayFilter;
+    return Array.isArray(a.attendance_days) && a.attendance_days.includes(activeDayFilter);
   }
 
   /* ── ADD PANELS ── */
@@ -379,6 +421,10 @@
       (a.phone||'').includes(filter) ||
       (a.email||'').toLowerCase().includes(filter)
     );
+    visibleIds = filtered.map(a => a.id);
+
+    list.classList.toggle('selecting', selectMode);
+    updateBulkBar();
 
     if (!filtered.length) {
       list.innerHTML = `<div class="empty">${filter ? 'No results for "'+esc(filter)+'"' : 'No participants yet — add some above.'}</div>`;
@@ -386,9 +432,36 @@
     }
 
     list.innerHTML = filtered.map(a => {
+      const picked  = selected.has(a.id);
+      const selBox  = selectMode
+        ? `<input type="checkbox" class="at-select" ${picked?'checked':''} onclick="event.stopPropagation();toggleSelect(${a.id})">`
+        : '';
+      const selCls  = selectMode && picked ? ' selected' : '';
+      const rowClick = selectMode ? `onclick="toggleSelect(${a.id})"` : '';
+
+      // All Days view for a multi-day event: show per-day dot indicators
+      if (!activeDayFilter && eventDays.length > 1) {
+        const dots = eventDays.map(d => {
+          const hit = Array.isArray(a.attendance_days) && a.attendance_days.includes(d.dateStr);
+          return `<span class="day-dot ${hit?'day-dot-on':'day-dot-off'}" title="Day ${d.day} · ${d.label}">${d.day}</span>`;
+        }).join('');
+        return `<div class="at-item ${a.attended?'attended':'absent'}${selCls}" data-id="${a.id}" ${rowClick}>
+          ${selBox}
+          <div class="at-info">
+            <div class="at-name">${esc(a.name)}</div>
+            <div class="at-sub">${[a.phone,a.email].filter(Boolean).join(' · ')||'—'}</div>
+          </div>
+          <div class="day-dots">${dots}</div>
+          <button class="at-del" onclick="event.stopPropagation();removeAt(${a.id})" title="Remove"><i class="fas fa-times"></i></button>
+        </div>`;
+      }
       const on = attendedOnDay(a);
-      return `<div class="at-item ${on?'attended':'absent'}" data-id="${a.id}" onclick="toggle(${a.id})">
-        <input type="checkbox" class="at-check" ${on?'checked':''} onclick="event.stopPropagation();toggle(${a.id})">
+      // In select mode the row toggles selection instead of attendance
+      const attCheck = selectMode
+        ? ''
+        : `<input type="checkbox" class="at-check" ${on?'checked':''} onclick="event.stopPropagation();toggle(${a.id})">`;
+      return `<div class="at-item ${on?'attended':'absent'}${selCls}" data-id="${a.id}" ${selectMode ? rowClick : `onclick="toggle(${a.id})"`}>
+        ${selBox}${attCheck}
         <div class="at-info">
           <div class="at-name">${esc(a.name)}</div>
           <div class="at-sub">${[a.phone,a.email].filter(Boolean).join(' · ')||'—'}</div>
@@ -399,19 +472,103 @@
     }).join('');
   }
 
+  /* ── BULK SELECT & DELETE ── */
+  function toggleSelectMode() {
+    selectMode = !selectMode;
+    selected.clear();
+    const btn = document.getElementById('select-mode-btn');
+    btn.innerHTML = selectMode
+      ? '<i class="fas fa-xmark"></i> Cancel'
+      : '<i class="fas fa-check-square"></i> Select';
+    document.getElementById('bulk-bar').classList.toggle('open', selectMode);
+    renderList();
+  }
+
+  function toggleSelect(id) {
+    if (selected.has(id)) selected.delete(id); else selected.add(id);
+    renderList();
+  }
+
+  function toggleSelectAllVisible(checked) {
+    if (checked) visibleIds.forEach(id => selected.add(id));
+    else visibleIds.forEach(id => selected.delete(id));
+    renderList();
+  }
+
+  function updateBulkBar() {
+    if (!selectMode) return;
+    const n = selected.size;
+    document.getElementById('bulk-count').textContent = `${n} selected`;
+    document.getElementById('bulk-delete-btn').disabled = n === 0;
+    const allShown = visibleIds.length > 0 && visibleIds.every(id => selected.has(id));
+    document.getElementById('bulk-select-all').checked = allShown;
+  }
+
+  async function bulkDelete() {
+    const ids = [...selected];
+    if (!ids.length) return;
+    if (!confirm(`Delete ${ids.length} participant${ids.length > 1 ? 's' : ''}? This cannot be undone.`)) return;
+
+    const btn = document.getElementById('bulk-delete-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting…';
+    try {
+      const r = await fetch('/api/events/' + eventId + '/attendees', {
+        method: 'DELETE', headers: H, body: JSON.stringify({ attendee_ids: ids })
+      });
+      if (!r.ok) throw new Error();
+      const data = await r.json();
+      const removed = new Set(data.ids || ids);
+      attendees = attendees.filter(a => !removed.has(a.id));
+      selected.clear();
+      renderList();
+      toast(`${data.deleted ?? ids.length} participant${(data.deleted ?? ids.length) !== 1 ? 's' : ''} deleted`, 'success');
+    } catch (ex) {
+      toast('Failed to delete — please try again', 'error');
+    } finally {
+      btn.innerHTML = '<i class="fas fa-trash"></i> Delete Selected';
+      updateBulkBar();
+    }
+  }
+
+  async function deleteAllParticipants() {
+    const n = attendees.length;
+    if (!n) { toast('There are no participants to delete', 'info'); return; }
+    if (!confirm(`Delete ALL ${n} participants from this event? This cannot be undone.`)) return;
+    const typed = prompt(`Type DELETE to confirm removing all ${n} participants.`);
+    if ((typed || '').trim().toUpperCase() !== 'DELETE') { toast('Cancelled', 'info'); return; }
+
+    try {
+      const r = await fetch('/api/events/' + eventId + '/attendees', {
+        method: 'DELETE', headers: H, body: JSON.stringify({ all: true })
+      });
+      if (!r.ok) throw new Error();
+      const data = await r.json();
+      attendees = [];
+      selected.clear();
+      renderList();
+      toast(`${data.deleted ?? n} participants deleted`, 'success');
+    } catch (ex) {
+      toast('Failed to delete — please try again', 'error');
+    }
+  }
+
   async function toggle(id) {
     const el = document.querySelector('[data-id="'+id+'"]');
     if (el) el.classList.add('busy');
     try {
+      const body = { attendee_id: id };
+      if (activeDayFilter) body.day_date = activeDayFilter;
       const r = await fetch('/api/events/' + eventId + '/attendance', {
-        method:'PATCH', headers:H, body: JSON.stringify({attendee_id:id})
+        method:'PATCH', headers:H, body: JSON.stringify(body)
       });
       if (!r.ok) throw new Error();
       const updated = await r.json();
       const idx = attendees.findIndex(a => a.id === id);
       if (idx !== -1) attendees[idx] = updated;
       renderList();
-      toast(updated.attended ? '✓ Marked as attended' : 'Attendance removed', updated.attended?'success':'info');
+      const isAttended = attendedOnDay(updated);
+      toast(isAttended ? '✓ Marked as attended' : 'Attendance removed', isAttended ? 'success' : 'info');
     } catch(ex) {
       if (el) el.classList.remove('busy');
       toast('Failed to update', 'error');
@@ -424,6 +581,7 @@
       method:'DELETE', headers:H, body: JSON.stringify({attendee_id:id})
     });
     attendees = attendees.filter(a => a.id !== id);
+    selected.delete(id);
     renderList();
   }
 
@@ -565,7 +723,7 @@
 
   /* ── MARK ALL ── */
   async function markAllAttended() {
-    const unattended = attendees.filter(a => !a.attended).length;
+    const unattended = attendees.filter(a => !attendedOnDay(a)).length;
     if (!unattended) { toast('Everyone is already marked as attended', 'info'); return; }
     if (!confirm(`Mark all ${unattended} unattended participant${unattended > 1 ? 's' : ''} as attended?`)) return;
 
@@ -574,15 +732,24 @@
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Marking…';
 
     try {
-      const r = await fetch('/api/events/' + eventId + '/attendees', { method: 'PATCH', headers: H });
-      if (!r.ok) throw new Error();
-      const updated = await r.json(); // array of newly-marked attendees
-      updated.forEach(u => {
-        const idx = attendees.findIndex(a => a.id === u.id);
-        if (idx !== -1) attendees[idx] = u;
+      const body = activeDayFilter ? { day_date: activeDayFilter } : {};
+      const r = await fetch('/api/events/' + eventId + '/attendees', {
+        method: 'PATCH', headers: H, body: JSON.stringify(body)
       });
+      if (!r.ok) throw new Error();
+      const result = await r.json();
+      if (activeDayFilter) {
+        // API returns all attendees with updated attendance_days — replace list
+        attendees = result;
+      } else {
+        // API returns only newly-marked attendees — merge
+        result.forEach(u => {
+          const idx = attendees.findIndex(a => a.id === u.id);
+          if (idx !== -1) attendees[idx] = u;
+        });
+      }
       renderList();
-      toast(`${updated.length} participant${updated.length !== 1 ? 's' : ''} marked as attended`, 'success');
+      toast(`${unattended} participant${unattended !== 1 ? 's' : ''} marked as attended`, 'success');
     } catch(ex) {
       toast('Failed to mark all — please try again', 'error');
     } finally {

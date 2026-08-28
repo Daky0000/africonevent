@@ -94,6 +94,38 @@ async function initDB() {
     )
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS attendance_days (
+      id          SERIAL PRIMARY KEY,
+      attendee_id INTEGER NOT NULL REFERENCES attendees(id) ON DELETE CASCADE,
+      event_id    INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      day_date    DATE NOT NULL,
+      attended_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(attendee_id, day_date)
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS verification_attempts (
+      id           SERIAL PRIMARY KEY,
+      event_id     INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      attendee_id  INTEGER REFERENCES attendees(id) ON DELETE CASCADE,
+      ip_address   VARCHAR(45),
+      succeeded    BOOLEAN NOT NULL DEFAULT FALSE,
+      attempted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_verification_attempts_attendee
+    ON verification_attempts (attendee_id, attempted_at)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_verification_attempts_ip
+    ON verification_attempts (event_id, ip_address, attempted_at)
+  `);
+
   const bcrypt = require('bcryptjs');
   const hash = await bcrypt.hash('Africon@i', 10);
   await pool.query(

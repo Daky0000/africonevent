@@ -132,6 +132,68 @@
       cursor:pointer; transition:background .15s;
     }
     .congrats-btn:hover { background:#003d99; }
+
+    /* Verification modal */
+    .verify-overlay {
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,.55); z-index:1001;
+      align-items:center; justify-content:center; padding:20px;
+    }
+    .verify-overlay.open { display:flex; }
+    .verify-card {
+      background:white; border-radius:20px; padding:28px 24px 24px;
+      max-width:380px; width:100%;
+      box-shadow:0 24px 64px rgba(0,0,0,.3);
+      animation: popIn .25s cubic-bezier(.175,.885,.32,1.275);
+    }
+    .verify-icon { font-size:40px; text-align:center; line-height:1; margin-bottom:12px; }
+    .verify-title { font-size:19px; font-weight:800; color:#111; text-align:center; margin-bottom:4px; }
+    .verify-name {
+      font-size:14px; font-weight:700; color:#0052CC; text-align:center;
+      background:#f0f4ff; border-radius:20px; padding:6px 14px;
+      display:inline-block; margin:0 auto 14px; width:auto;
+    }
+    .verify-name-wrap { text-align:center; }
+    .verify-sub { font-size:13px; color:#666; text-align:center; line-height:1.6; margin-bottom:20px; }
+    .verify-methods { display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
+    .method-btn {
+      display:flex; align-items:center; gap:14px; width:100%;
+      padding:15px 16px; border:2px solid #e2e6ee; border-radius:12px;
+      background:white; cursor:pointer; text-align:left;
+      font-family:inherit; transition:all .15s;
+    }
+    .method-btn:hover { border-color:#0052CC; background:#f5f8ff; }
+    .method-btn i { font-size:18px; color:#0052CC; width:22px; text-align:center; flex-shrink:0; }
+    .method-btn strong { display:block; font-size:14px; color:#222; font-weight:700; }
+    .method-btn span { display:block; font-size:11px; color:#999; margin-top:2px; }
+    .verify-field { margin-bottom:6px; }
+    .verify-field label {
+      display:block; font-size:11px; font-weight:700; color:#666;
+      text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px;
+    }
+    .verify-field input {
+      width:100%; padding:13px 14px; border:2px solid #ddd; border-radius:10px;
+      font-size:15px; font-family:inherit;
+    }
+    .verify-field input:focus { outline:none; border-color:#0052CC; box-shadow:0 0 0 3px rgba(0,82,204,.1); }
+    .verify-field input.shake { animation: shake .35s; border-color:#dc3545; }
+    #verify-error { color:#dc3545; font-size:12.5px; min-height:18px; line-height:1.5; margin-bottom:10px; }
+    .verify-actions { display:flex; gap:10px; }
+    .verify-btn-main {
+      flex:1; padding:14px; background:#0052CC; color:white; border:none;
+      border-radius:10px; font-size:15px; font-weight:700; cursor:pointer;
+      font-family:inherit; transition:background .15s;
+    }
+    .verify-btn-main:hover { background:#003d99; }
+    .verify-btn-main:disabled { background:#999; cursor:not-allowed; }
+    .verify-btn-ghost {
+      padding:14px 18px; background:#f0f2f5; color:#555; border:none;
+      border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit;
+    }
+    .verify-btn-ghost:hover { background:#e4e7ec; }
+    .verify-note {
+      font-size:11px; color:#aaa; text-align:center; margin-top:14px; line-height:1.5;
+    }
   </style>
 </head>
 <body>
@@ -163,7 +225,7 @@
     <!-- Attendance view (hidden until code verified) -->
     <div id="attend-view" style="display:none;">
       <div class="card">
-        <p class="instructions">Find your name below and tap it to mark your attendance.</p>
+        <p class="instructions">Find your name below and tap it. You&#39;ll be asked to confirm your phone number or email to verify it&#39;s you.</p>
 
         <div class="stats-row">
           <div class="stat-pill"><div class="stat-pill-val" id="s-attended">0</div><div class="stat-pill-lbl">Attended</div></div>
@@ -182,7 +244,7 @@
       </div>
     </div>
 
-    <p class="privacy">&#x1F512; Your data is used for event records only and will not be shared.</p>
+    <p class="privacy">&#x1F512; Only names are shown here. Phone numbers and email addresses are never displayed &mdash;<br>they are used solely to confirm your identity and for event records.</p>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -194,6 +256,51 @@
       <div class="congrats-title">Attendance Confirmed!</div>
       <div class="congrats-name" id="congrats-name"></div>
       <div class="congrats-body">Your attendance has been successfully recorded.<br>Thank you for joining us today!</div>
+    </div>
+  </div>
+
+  <!-- Identity verification modal -->
+  <div class="verify-overlay" id="verify-overlay">
+    <div class="verify-card">
+      <div class="verify-icon">🛡️</div>
+      <div class="verify-title">Verify it's you</div>
+      <div class="verify-name-wrap"><div class="verify-name" id="verify-name"></div></div>
+
+      <!-- Step 1: choose a method -->
+      <div id="verify-step-method">
+        <div class="verify-sub">Confirm your identity to mark your attendance.<br>How would you like to verify?</div>
+        <div class="verify-methods">
+          <button class="method-btn" id="method-phone" onclick="chooseMethod('phone')">
+            <i class="fas fa-phone"></i>
+            <span><strong>Phone number</strong><span>Enter the number you registered with</span></span>
+          </button>
+          <button class="method-btn" id="method-email" onclick="chooseMethod('email')">
+            <i class="fas fa-envelope"></i>
+            <span><strong>Email address</strong><span>Enter the email you registered with</span></span>
+          </button>
+        </div>
+        <div class="verify-actions">
+          <button class="verify-btn-ghost" style="flex:1" onclick="closeVerify()">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Step 2: enter the detail -->
+      <div id="verify-step-input" style="display:none">
+        <div class="verify-sub" id="verify-input-sub"></div>
+        <div class="verify-field">
+          <label id="verify-input-label">Phone number</label>
+          <input id="verify-input" autocomplete="off"
+                 onkeydown="if(event.key==='Enter')submitVerification()">
+        </div>
+        <div id="verify-error"></div>
+        <div class="verify-actions">
+          <button class="verify-btn-ghost" onclick="backToMethods()"><i class="fas fa-arrow-left"></i></button>
+          <button class="verify-btn-main" id="verify-submit" onclick="submitVerification()">
+            <i class="fas fa-check"></i> Verify &amp; Check In
+          </button>
+        </div>
+        <div class="verify-note">🔒 We only compare what you type with the details the organiser registered. Nothing is displayed or shared.</div>
+      </div>
     </div>
   </div>
 
@@ -313,8 +420,9 @@
       const filter = document.getElementById('search').value.toLowerCase();
       const list   = document.getElementById('list');
 
+      // Name-only search — contact details are never sent to this page
       const filtered = filter
-        ? attendees.filter(a => a.name.toLowerCase().includes(filter) || (a.phone||'').includes(filter))
+        ? attendees.filter(a => a.name.toLowerCase().includes(filter))
         : attendees;
 
       if (!filtered.length) {
@@ -323,10 +431,9 @@
       }
 
       list.innerHTML = filtered.map(a => {
-        const initials   = a.name.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
-        const contactSub = [a.phone, a.email].filter(Boolean).join(' · ');
-        const sub        = a.attended ? '✓ Attendance recorded' : (contactSub || '');
-        return `<div class="at-item ${a.attended ? 'attended' : 'not-attended clickable'}" data-id="${a.id}" ${a.attended ? '' : `onclick="toggle(${a.id})"`}>
+        const initials = a.name.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
+        const sub      = a.attended ? '✓ Attendance recorded' : 'Tap to verify and check in';
+        return `<div class="at-item ${a.attended ? 'attended' : 'not-attended clickable'}" data-id="${a.id}" ${a.attended ? '' : `onclick="startVerify(${a.id})"`}>
           <div class="avatar">${esc(initials)}</div>
           <div class="at-info">
             <div class="at-name">${esc(a.name)}</div>
@@ -337,32 +444,135 @@
       }).join('');
     }
 
-    async function toggle(id) {
+    /* ── IDENTITY VERIFICATION ── */
+    let pendingAttendee = null;  // attendee awaiting verification
+    let chosenMethod    = null;  // 'phone' | 'email'
+
+    function startVerify(id) {
       const a = attendees.find(x => x.id === id);
       if (!a || a.attended) return; // already marked — no action
 
+      pendingAttendee = a;
+      chosenMethod    = null;
+
+      // Nothing on file to check against — nothing to verify, so check straight in
+      if (!a.has_phone && !a.has_email) { markAttendance(); return; }
+
+      document.getElementById('verify-name').textContent = a.name;
+      document.getElementById('verify-error').textContent = '';
+      document.getElementById('verify-input').value = '';
+
+      // Only offer the methods this person actually registered with
+      document.getElementById('method-phone').style.display = a.has_phone ? 'flex' : 'none';
+      document.getElementById('method-email').style.display = a.has_email ? 'flex' : 'none';
+
+      backToMethods();
+      document.getElementById('verify-overlay').classList.add('open');
+
+      // Only one option available — skip the chooser
+      if (a.has_phone && !a.has_email) chooseMethod('phone');
+      else if (a.has_email && !a.has_phone) chooseMethod('email');
+    }
+
+    function backToMethods() {
+      chosenMethod = null;
+      document.getElementById('verify-step-method').style.display = 'block';
+      document.getElementById('verify-step-input').style.display  = 'none';
+      document.getElementById('verify-error').textContent = '';
+    }
+
+    function chooseMethod(method) {
+      chosenMethod = method;
+      const isPhone = method === 'phone';
+      const input   = document.getElementById('verify-input');
+
+      document.getElementById('verify-input-label').textContent =
+        isPhone ? 'Your phone number' : 'Your email address';
+      document.getElementById('verify-input-sub').innerHTML = isPhone
+        ? 'Enter the phone number you registered with.'
+        : 'Enter the email address you registered with.';
+      input.type        = isPhone ? 'tel' : 'email';
+      input.placeholder = isPhone ? 'e.g. 0244123456' : 'e.g. you@email.com';
+      input.value       = '';
+
+      document.getElementById('verify-error').textContent = '';
+      document.getElementById('verify-step-method').style.display = 'none';
+      document.getElementById('verify-step-input').style.display  = 'block';
+      input.focus();
+    }
+
+    function closeVerify() {
+      document.getElementById('verify-overlay').classList.remove('open');
+      pendingAttendee = null;
+      chosenMethod    = null;
+    }
+
+    async function submitVerification() {
+      if (!pendingAttendee || !chosenMethod) return;
+      const input = document.getElementById('verify-input');
+      const value = input.value.trim();
+      if (!value) { showVerifyError(chosenMethod === 'phone' ? 'Please enter your phone number.' : 'Please enter your email address.'); return; }
+      await markAttendance(chosenMethod, value);
+    }
+
+    function showVerifyError(msg) {
+      document.getElementById('verify-error').textContent = msg;
+      const input = document.getElementById('verify-input');
+      input.classList.add('shake');
+      input.addEventListener('animationend', () => input.classList.remove('shake'), { once: true });
+      input.focus();
+      input.select();
+    }
+
+    async function markAttendance(method, contact) {
+      if (!pendingAttendee) return;
+      const id  = pendingAttendee.id;
+      const btn = document.getElementById('verify-submit');
+      const usingModal = !!method;
+
+      if (usingModal) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying…'; }
       const el = document.querySelector(`[data-id="${id}"]`);
-      if (el) el.classList.add('busy');
+      if (el && !usingModal) el.classList.add('busy');
 
       try {
         const res = await fetch(`/api/events/${eventId}/attendance`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ attendee_id: id, code: verifiedCode }),
+          body: JSON.stringify({ attendee_id: id, code: verifiedCode, method, contact }),
         });
-        if (!res.ok) throw new Error();
-        const updated = await res.json();
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          const msg = data.error || 'Something went wrong. Please try again.';
+          if (usingModal) {
+            showVerifyError(
+              data.attempts_left !== undefined && data.attempts_left > 0
+                ? `${msg} ${data.attempts_left} attempt${data.attempts_left === 1 ? '' : 's'} left.`
+                : msg
+            );
+          } else {
+            toast(msg);
+            if (el) el.classList.remove('busy');
+          }
+          return;
+        }
+
+        // Verified — merge the update, keeping the public-safe fields we already hold
         const idx = attendees.findIndex(x => x.id === id);
-        if (idx !== -1) attendees[idx] = updated;
+        if (idx !== -1) attendees[idx] = { ...attendees[idx], ...data };
         render();
         updateStats();
 
+        closeVerify();
         // Lock this browser so refresh can't re-open the list
-        localStorage.setItem(`africon_attended_${eventId}`, JSON.stringify({ name: updated.name }));
-        showCongratsModal(updated.name);
+        localStorage.setItem(`africon_attended_${eventId}`, JSON.stringify({ name: data.name }));
+        showCongratsModal(data.name);
       } catch {
-        toast('Failed — try again');
-        if (el) el.classList.remove('busy');
+        if (usingModal) showVerifyError('Network error. Please try again.');
+        else { toast('Failed — try again'); if (el) el.classList.remove('busy'); }
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Verify &amp; Check In';
       }
     }
 

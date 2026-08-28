@@ -1,5 +1,29 @@
 const { pool, initDB } = require('../../_db');
-const { requireAuth } = require('../../_auth');
+const { requireAuth, getToken, verifyToken } = require('../../_auth');
+
+const FULL_LIST_SQL = `
+  SELECT a.*,
+    COALESCE(json_agg(ad.day_date::text ORDER BY ad.day_date) FILTER (WHERE ad.day_date IS NOT NULL), '[]') AS attendance_days
+  FROM attendees a
+  LEFT JOIN attendance_days ad ON ad.attendee_id = a.id
+  WHERE a.event_id = $1
+  GROUP BY a.id
+  ORDER BY a.name ASC
+`;
+
+// Public view: name only. Contact details never leave the server — the page
+// just needs to know which verification methods are available for each person.
+const PUBLIC_LIST_SQL = `
+  SELECT a.id, a.name, a.attended,
+    (a.phone IS NOT NULL AND a.phone <> '') AS has_phone,
+    (a.email IS NOT NULL AND a.email <> '') AS has_email,
+    COALESCE(json_agg(ad.day_date::text ORDER BY ad.day_date) FILTER (WHERE ad.day_date IS NOT NULL), '[]') AS attendance_days
+  FROM attendees a
+  LEFT JOIN attendance_days ad ON ad.attendee_id = a.id
+  WHERE a.event_id = $1
+  GROUP BY a.id
+  ORDER BY a.name ASC
+`;
 
 module.exports = async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
@@ -9,10 +33,9 @@ module.exports = async (req, res) => {
     await initDB();
 
     if (req.method === 'GET') {
-      const { rows } = await pool.query(
-        'SELECT * FROM attendees WHERE event_id = $1 ORDER BY name ASC',
-        [id]
-      );
+      const token = getToken(req);
+      const isAdmin = token ? !!verifyToken(token) : false;
+      const { rows } = await pool.query(isAdmin ? FULL_LIST_SQL : PUBLIC_LIST_SQL, [id]);
       return res.status(200).json(rows);
     }
 
@@ -45,7 +68,28 @@ module.exports = async (req, res) => {
     if (req.method === 'PATCH') {
       const payload = requireAuth(req, res);
       if (!payload) return;
-      // Bulk mark all unattended participants as attended
+      const { day_date } = req.body || {};
+
+      if (day_date) {
+        // Per-day bulk mark: insert into attendance_days for all attendees not yet marked that day
+        await pool.query(
+          `INSERT INTO attendance_days (attendee_id, event_id, day_date)
+           SELECT id, $1, $2 FROM attendees WHERE event_id = $1
+           ON CONFLICT (attendee_id, day_date) DO NOTHING`,
+          [id, day_date]
+        );
+        // Ensure attended flag is TRUE for all
+        await pool.query(
+          `UPDATE attendees SET attended = TRUE, attended_at = NOW()
+           WHERE event_id = $1 AND attended = FALSE`,
+          [id]
+        );
+        // Return all attendees with updated attendance_days
+        const { rows } = await pool.query(FULL_LIST_SQL, [id]);
+        return res.status(200).json(rows);
+      }
+
+      // Legacy: bulk mark all globally unattended
       const { rows } = await pool.query(
         `UPDATE attendees SET attended = TRUE, attended_at = NOW()
          WHERE event_id = $1 AND attended = FALSE
@@ -58,10 +102,24 @@ module.exports = async (req, res) => {
     if (req.method === 'DELETE') {
       const payload = requireAuth(req, res);
       if (!payload) return;
-      const { attendee_id } = req.body || {};
-      if (!attendee_id) return res.status(400).json({ error: 'attendee_id required' });
-      await pool.query('DELETE FROM attendees WHERE id = $1 AND event_id = $2', [attendee_id, id]);
-      return res.status(200).json({ ok: true });
+      const { attendee_id, attendee_ids, all } = req.body || {};
+
+      if (all === true) {
+        const { rowCount } = await pool.query('DELETE FROM attendees WHERE event_id = $1', [id]);
+        return res.status(200).json({ ok: true, deleted: rowCount, ids: [] });
+      }
+
+      const ids = (Array.isArray(attendee_ids) ? attendee_ids : (attendee_id ? [attendee_id] : []))
+        .map(Number)
+        .filter(n => Number.isInteger(n) && n > 0);
+
+      if (!ids.length) return res.status(400).json({ error: 'attendee_id, attendee_ids or all required' });
+
+      const { rows } = await pool.query(
+        'DELETE FROM attendees WHERE id = ANY($1::int[]) AND event_id = $2 RETURNING id',
+        [ids, id]
+      );
+      return res.status(200).json({ ok: true, deleted: rows.length, ids: rows.map(r => r.id) });
     }
 
     res.status(405).json({ error: 'Method not allowed' });

@@ -8,7 +8,15 @@
       "PowerShell(git config --global user.name)",
       "PowerShell(git config --global user.email)",
       "PowerShell(vercel --version 2>&1)",
-      "PowerShell(npm install -g vercel 2>&1)"
+      "PowerShell(npm install -g vercel 2>&1)",
+      "Bash(Get-ChildItem -Path \"d:\\\\Africonevents\" -Recurse -Force)",
+      "Bash(Select-Object -First 100)",
+      "Bash(Format-List FullName)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git rm *)",
+      "Bash(vercel --prod)"
     ]
   }
 }
