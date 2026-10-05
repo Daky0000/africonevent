@@ -176,8 +176,11 @@
   <div id="pane-sprint" class="pane">
     <div class="card">
       <div class="card-hd">
-        <h3><i class="fas fa-layer-group" style="color:#0052CC;margin-right:6px"></i>Sprint Content</h3>
-        <span style="font-size:12px;color:#999">Shown to participants after they check in</span>
+        <h3><i class="fas fa-layer-group" style="color:#0052CC;margin-right:6px"></i>Sprint Content by Date</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="date" id="sc-date" onchange="renderDayContent()" style="width:auto;padding:7px 10px">
+          <a class="btn btn-blue" id="sc-open" style="padding:8px 14px;text-decoration:none" href="/admin/sprint-content.html"><i class="fas fa-pen"></i> Manage</a>
+        </div>
       </div>
       <div class="card-body"><div class="track-grid" id="track-grid"><div class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div></div>
     </div>
@@ -387,29 +390,36 @@
 
   async function loadSprint() {
     try {
-      const [tr, sr] = await Promise.all([
-        fetch('/api/sprint?action=tracks', { headers: H }),
-        fetch('/api/sprint?action=sessions', { headers: H }),
-      ]);
-      if (tr.ok) renderTracks(await tr.json());
+      const sr = await fetch('/api/sprint?action=sessions', { headers: H });
       if (sr.ok) {
         sprintSessions = await sr.json();
+        const today = new Date().toLocaleDateString('en-CA');
+        const next = sprintSessions.find(s => s.date >= today) || sprintSessions[sprintSessions.length - 1];
+        document.getElementById('sc-date').value = next ? next.date : today;
+        renderDayContent();
         buildWeekFilter();
         renderSessions();
       }
     } catch(e) { toast('Network error loading AI Sprint', 'error'); }
   }
 
-  function renderTracks(tracks) {
-    document.getElementById('track-grid').innerHTML = tracks.map(t => `
-      <div class="track" onclick="location.href='/admin/sprint-track.html?key=${encodeURIComponent(t.key)}'">
-        <div class="track-title">${esc(t.title)}</div>
-        <div class="track-time">${esc(t.time_label || '')}</div>
-        <div class="track-flags">
-          <span class="flag ${t.assessment_url ? 'flag-ok' : 'flag-miss'}">${t.assessment_url ? '✓' : '✗'} Assessment</span>
-          <span class="flag ${t.playbook_url ? 'flag-ok' : 'flag-miss'}">${t.playbook_url ? '✓' : '✗'} Playbook</span>
-          <span class="flag flag-info">${t.resource_count} asset${t.resource_count === 1 ? '' : 's'}</span>
-        </div>
+  function contentFlags(s) {
+    return `<span class="flag ${s.assessment_url ? 'flag-ok' : 'flag-miss'}">${s.assessment_url ? '✓' : '✗'} Assessment</span>
+      <span class="flag ${s.playbook_url ? 'flag-ok' : 'flag-miss'}">${s.playbook_url ? '✓' : '✗'} Playbook</span>
+      <span class="flag flag-info">${s.resource_count} asset${s.resource_count === 1 ? '' : 's'}</span>`;
+  }
+
+  function renderDayContent() {
+    const date = document.getElementById('sc-date').value;
+    document.getElementById('sc-open').href = '/admin/sprint-content.html?date=' + date;
+    const day = sprintSessions.filter(s => s.date === date);
+    const el = document.getElementById('track-grid');
+    if (!day.length) { el.innerHTML = '<div class="empty" style="grid-column:1/-1">No Sprint sessions on this date.</div>'; return; }
+    el.innerHTML = day.map(s => `
+      <div class="track" onclick="location.href='/admin/sprint-content.html?id=${s.id}'">
+        <div class="track-title">${esc(s.track_title || s.name)}</div>
+        <div class="track-time">${esc(s.time_label || '')} · Week ${s.week_no}</div>
+        <div class="track-flags">${contentFlags(s)}</div>
       </div>`).join('');
   }
 
@@ -453,7 +463,8 @@
         <td>${s.total_attendees}</td>
         <td>${s.attended_count}</td>
         <td>${s.attended_count ? `${s.assessment_count}/${s.attended_count}` : '<span class="muted">—</span>'}</td>
-        <td><button class="btn-sm" data-slug="${esc(s.slug)}" onclick="event.stopPropagation();copySprintLink(this)" title="Copy check-in link"><i class="fas fa-link"></i></button></td>
+        <td style="white-space:nowrap"><button class="btn-sm" onclick="event.stopPropagation();location.href='/admin/sprint-content.html?id=${s.id}'" title="Manage content (${s.resource_count} assets)"><i class="fas fa-folder-open"></i></button>
+          <button class="btn-sm" data-slug="${esc(s.slug)}" onclick="event.stopPropagation();copySprintLink(this)" title="Copy check-in link"><i class="fas fa-link"></i></button></td>
       </tr>`;
     }).join('');
 

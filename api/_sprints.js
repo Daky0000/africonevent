@@ -135,6 +135,13 @@ async function migrateSprints(pool) {
     )
   `);
 
+  // Content is managed per session (date), not per Sprint track
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS assessment_url TEXT`);
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS playbook_url TEXT`);
+  await pool.query(`ALTER TABLE sprint_resources ADD COLUMN IF NOT EXISTS event_id INTEGER REFERENCES events(id) ON DELETE CASCADE`);
+  await pool.query(`ALTER TABLE sprint_resources ALTER COLUMN track_key DROP NOT NULL`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_sprint_resources_event ON sprint_resources (event_id)`);
+
   for (let i = 0; i < TRACKS.length; i++) {
     const t = TRACKS[i];
     await pool.query(

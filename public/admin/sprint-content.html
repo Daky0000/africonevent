@@ -43,6 +43,23 @@
     .del{background:none;border:none;color:#c0392b;cursor:pointer;font-size:14px;padding:6px}
     .del:hover{color:#8e1d12}
     .empty{text-align:center;padding:28px;color:#aaa;font-size:13px}
+    .datebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .datebar input{width:auto}
+    .nav-btn{background:#fff;border:1px solid #ddd;border-radius:6px;padding:9px 12px;cursor:pointer;color:#333}
+    .nav-btn:hover{border-color:#0052CC;color:#0052CC}
+    .nav-btn:disabled{opacity:.4;cursor:not-allowed}
+    .sess-tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:22px}
+    .sess-tab{background:#fff;border:2px solid #e2e6ee;border-radius:8px;padding:12px 14px;cursor:pointer;text-align:left;font-family:inherit}
+    .sess-tab:hover{border-color:#9db8e8}
+    .sess-tab.active{border-color:#0052CC;background:#f5f8ff}
+    .sess-tab-title{font-weight:700;font-size:13px;color:#222}
+    .sess-tab-meta{font-size:11.5px;color:#888;margin-top:3px}
+    .flags{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}
+    .flag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px}
+    .flag-ok{background:#d4edda;color:#155724}
+    .flag-miss{background:#fde8e8;color:#9b1c1c}
+    .flag-info{background:#eef3ff;color:#0052CC}
+    .no-sess{background:#fff;border-radius:8px;padding:28px;text-align:center;color:#999;font-size:13px;margin-bottom:22px}
     #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);padding:11px 22px;border-radius:24px;font-size:13px;font-weight:600;color:#fff;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9999;max-width:90%}
     #toast.show{opacity:1}
     #toast.success{background:#1a7a3f}
@@ -56,8 +73,17 @@
 </nav>
 
 <div class="main">
+  <div class="datebar">
+    <button class="nav-btn" id="prev-day" onclick="stepDay(-1)" title="Previous Sprint day"><i class="fas fa-chevron-left"></i></button>
+    <input type="date" id="day" onchange="pickDate(this.value)">
+    <button class="nav-btn" id="next-day" onclick="stepDay(1)" title="Next Sprint day"><i class="fas fa-chevron-right"></i></button>
+    <button class="nav-btn" onclick="pickDate(new Date().toLocaleDateString('en-CA'))">Today</button>
+  </div>
+  <div id="sess-tabs"></div>
+
+  <div id="editor" style="display:none">
   <h1 id="title">Loading…</h1>
-  <p class="sub">This content appears on the participant's Sprint page for every session of this Sprint, once they check in.</p>
+  <p class="sub" id="sub"></p>
 
   <div class="card">
     <div class="card-hd"><h3><i class="fas fa-link" style="color:#0052CC;margin-right:6px"></i>Assessment &amp; Playbook</h3></div>
@@ -107,6 +133,7 @@
     <div class="card-hd"><h3><i class="fas fa-folder-open" style="color:#0052CC;margin-right:6px"></i>Shared with participants <span id="r-count" style="font-size:12px;color:#999;font-weight:400"></span></h3></div>
     <div id="r-list"><div class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
   </div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -115,20 +142,98 @@
   const token = localStorage.getItem('token');
   if (!token) window.location.replace('/admin/login.html');
   const H = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token };
-  const key = new URLSearchParams(location.search).get('key');
+  const qs = new URLSearchParams(location.search);
   let kind = 'prompt';
-  let track = null;
+  let track = null;      // the selected session and its content
+  let sessions = [];     // every Sprint session, for the date navigator
+  let dates = [];        // distinct Sprint dates, sorted
+  let currentDate = null;
 
-  async function load() {
-    const r = await fetch('/api/sprint?action=track&key=' + encodeURIComponent(key), { headers: H });
+  async function init() {
+    const r = await fetch('/api/sprint?action=sessions', { headers: H });
     if (r.status === 401) { window.location.replace('/admin/login.html'); return; }
-    if (!r.ok) { document.getElementById('title').textContent = 'Sprint not found'; return; }
+    sessions = await r.json();
+    dates = [...new Set(sessions.map(s => s.date))].sort();
+
+    const wanted = sessions.find(s => String(s.id) === qs.get('id'));
+    if (wanted) { pickDate(wanted.date, wanted.id); return; }
+    const today = new Date().toLocaleDateString('en-CA');
+    pickDate(qs.get('date') || dates.find(d => d >= today) || dates[dates.length - 1]);
+  }
+
+  function stepDay(dir) {
+    const i = dates.indexOf(currentDate);
+    let next;
+    if (i !== -1) next = dates[i + dir];
+    else next = dir > 0 ? dates.find(d => d > currentDate) : [...dates].reverse().find(d => d < currentDate);
+    if (next) pickDate(next);
+  }
+
+  function pickDate(date, sessionId) {
+    currentDate = date;
+    document.getElementById('day').value = date;
+    document.getElementById('prev-day').disabled = !dates.some(d => d < date);
+    document.getElementById('next-day').disabled = !dates.some(d => d > date);
+    const day = sessions.filter(s => s.date === date);
+    renderTabs(day, sessionId);
+    if (!day.length) {
+      document.getElementById('editor').style.display = 'none';
+      history.replaceState(null, '', '?date=' + date);
+      return;
+    }
+    loadSession(sessionId || day[0].id);
+  }
+
+  function renderTabs(day, activeId) {
+    const el = document.getElementById('sess-tabs');
+    if (!day.length) {
+      el.innerHTML = `<div class="no-sess"><i class="fas fa-calendar-times"></i> No Sprint sessions on ${longDate(currentDate)}. Use the arrows to jump to the nearest Sprint day.</div>`;
+      return;
+    }
+    el.innerHTML = '<div class="sess-tabs">' + day.map(s => `
+      <button class="sess-tab ${s.id === activeId ? 'active' : ''}" data-id="${s.id}" onclick="loadSession(${s.id})">
+        <div class="sess-tab-title">${esc(s.track_title || s.name)}</div>
+        <div class="sess-tab-meta">${esc(s.time_label || '')} · Week ${s.week_no}</div>
+        <div class="flags">
+          <span class="flag ${s.assessment_url ? 'flag-ok' : 'flag-miss'}">${s.assessment_url ? '✓' : '✗'} Assessment</span>
+          <span class="flag ${s.playbook_url ? 'flag-ok' : 'flag-miss'}">${s.playbook_url ? '✓' : '✗'} Playbook</span>
+          <span class="flag flag-info">${s.resource_count} asset${s.resource_count === 1 ? '' : 's'}</span>
+        </div>
+      </button>`).join('') + '</div>';
+  }
+
+  async function loadSession(id) {
+    document.querySelectorAll('.sess-tab').forEach(b => b.classList.toggle('active', b.dataset.id === String(id)));
+    history.replaceState(null, '', '?id=' + id);
+    const r = await fetch('/api/sprint?action=session&id=' + id, { headers: H });
+    if (!r.ok) { toast('Could not load session', 'error'); return; }
     track = await r.json();
-    document.getElementById('title').textContent = track.title;
-    document.title = track.title + ' — Sprint Content';
+    const facil = track.delivery_mode === 'online'
+      ? `Online: ${track.facilitator_virtual || '—'}${track.facilitator_support ? ' + ' + track.facilitator_support : ''}`
+      : `In-person: ${track.facilitator_in_person || 'N/A'} · Virtual: ${track.facilitator_virtual || '—'}`;
+    document.getElementById('title').textContent = track.track_title || track.name;
+    document.getElementById('sub').textContent =
+      `${longDate(track.date)} · ${track.time_label || ''} · ${facil} · Code ${track.access_code}. ` +
+      `Shown only to participants of this session after they check in.`;
+    document.title = (track.track_title || track.name) + ' — ' + track.date;
     document.getElementById('assessment').value = track.assessment_url || '';
     document.getElementById('playbook').value = track.playbook_url || '';
+    document.getElementById('editor').style.display = 'block';
     renderResources();
+  }
+
+  // Keep the date tabs' content flags in step with edits
+  function syncTab() {
+    const s = sessions.find(x => x.id === track.id);
+    if (!s) return;
+    s.assessment_url = track.assessment_url;
+    s.playbook_url = track.playbook_url;
+    s.resource_count = track.resources.length;
+    renderTabs(sessions.filter(x => x.date === currentDate), track.id);
+  }
+
+  function longDate(d) {
+    return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   }
 
   function renderResources() {
@@ -169,7 +274,7 @@
     const btn = document.getElementById('save-links');
     btn.disabled = true;
     try {
-      const r = await fetch('/api/sprint?action=track&key=' + encodeURIComponent(key), {
+      const r = await fetch('/api/sprint?action=session&id=' + track.id, {
         method: 'PATCH', headers: H,
         body: JSON.stringify({
           assessment_url: document.getElementById('assessment').value,
@@ -180,6 +285,8 @@
       if (!r.ok) return toast(d.error || 'Failed to save', 'error');
       document.getElementById('assessment').value = d.assessment_url || '';
       document.getElementById('playbook').value = d.playbook_url || '';
+      track.assessment_url = d.assessment_url; track.playbook_url = d.playbook_url;
+      syncTab();
       toast('Links saved', 'success');
     } catch { toast('Network error', 'error'); }
     finally { btn.disabled = false; }
@@ -203,7 +310,7 @@
     if (kind === 'prompt' && !body.trim()) return toast('Please paste the prompt text', 'error');
     if (kind === 'link' && !url) return toast('Please enter the link', 'error');
 
-    const payload = { track_key: key, kind, title, body, url };
+    const payload = { event_id: track.id, kind, title, body, url };
     if (kind === 'file') {
       const f = fileInput.files[0];
       if (!f) return toast('Please choose a file', 'error');
@@ -221,6 +328,7 @@
       if (!r.ok) return toast(d.error || 'Failed to add', 'error');
       track.resources.push(d);
       renderResources();
+      syncTab();
       ['r-title', 'r-body', 'r-url'].forEach(id => document.getElementById(id).value = '');
       fileInput.value = '';
       toast('Added', 'success');
@@ -234,6 +342,7 @@
     if (!r.ok) return toast('Failed to delete', 'error');
     track.resources = track.resources.filter(x => x.id !== id);
     renderResources();
+    syncTab();
     toast('Removed', 'success');
   }
 
@@ -247,7 +356,7 @@
   function fmtSize(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-  if (key) load(); else document.getElementById('title').textContent = 'No Sprint selected';
+  init();
 </script>
 </body>
 </html>

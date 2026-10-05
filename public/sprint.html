@@ -129,7 +129,7 @@
     }
 
     function sessionCard(s, open) {
-      const t = data.tracks[s.track_key] || { title: s.event_name, resources: [] };
+      const t = s; // content is per session (date)
       const isToday = s.date === new Date().toLocaleDateString('en-CA');
       const tags = (isToday ? '<span class="tag tag-today">Today</span>' : '') +
                    (t.assessment_url && !s.assessment_opened ? '<span class="tag tag-todo">Assessment due</span>' : '');
