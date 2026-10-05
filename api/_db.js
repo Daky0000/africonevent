@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const { migrateSprints } = require('./_sprints');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -152,6 +153,8 @@ async function initDB() {
      ON CONFLICT (username) DO NOTHING`,
     ['Africon', 'Africon', 'africon@africon.com', hash]
   );
+
+  await migrateSprints(pool);
 
   initialized = true;
 }

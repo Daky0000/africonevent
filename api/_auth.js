@@ -30,4 +30,21 @@ function requireAuth(req, res) {
   return payload;
 }
 
-module.exports = { signToken, verifyToken, getToken, requireAuth };
+// Participant portal links use their own secret so a portal token can never
+// pass as an admin token (and vice versa).
+const PORTAL_SECRET = SECRET + ':sprint-portal';
+
+function signPortalToken(attendeeId) {
+  return jwt.sign({ aid: attendeeId, typ: 'portal' }, PORTAL_SECRET, { expiresIn: '180d' });
+}
+
+function verifyPortalToken(token) {
+  try {
+    const p = jwt.verify(token, PORTAL_SECRET);
+    return p && p.typ === 'portal' ? p : null;
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { signToken, verifyToken, getToken, requireAuth, signPortalToken, verifyPortalToken };

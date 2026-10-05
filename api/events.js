@@ -16,9 +16,10 @@ module.exports = async (req, res) => {
           COALESCE(SUM(CASE WHEN a.attended THEN 1 ELSE 0 END),0)::int AS attended_count
         FROM events e
         LEFT JOIN attendees a ON a.event_id = e.id
+        WHERE e.kind = $1
         GROUP BY e.id
         ORDER BY e.start_date DESC
-      `);
+      `, [req.query.kind === 'sprint' ? 'sprint' : 'masterclass']);
       return res.status(200).json(rows);
     }
 

@@ -256,6 +256,9 @@
       <div class="congrats-title">Attendance Confirmed!</div>
       <div class="congrats-name" id="congrats-name"></div>
       <div class="congrats-body">Your attendance has been successfully recorded.<br>Thank you for joining us today!</div>
+      <button class="congrats-btn" id="portal-btn" style="display:none" onclick="goPortal()">
+        Continue to your Sprint page <i class="fas fa-arrow-right"></i>
+      </button>
     </div>
   </div>
 
@@ -311,6 +314,7 @@
     let eventId      = null;
     let attendees    = [];
     let verifiedCode = null;
+    let isSprint     = false;
 
     async function init() {
       try {
@@ -322,6 +326,7 @@
         }
         const ev = await evRes.json();
         eventId = ev.id;
+        isSprint = ev.kind === 'sprint';
         document.getElementById('ev-name').textContent = ev.name;
         const s    = new Date(ev.start_date);
         const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
@@ -568,7 +573,12 @@
         closeVerify();
         // Lock this browser so refresh can't re-open the list
         localStorage.setItem(todayKey(), JSON.stringify({ name: data.name }));
+        if (data.portal_token) {
+          try { localStorage.setItem(portalKey(), data.portal_token); } catch {}
+        }
         showCongratsModal(data.name);
+        // AI Sprint: take the participant on to their Sprint page
+        if (data.portal_token) setTimeout(goPortal, 2500);
       } catch {
         if (usingModal) showVerifyError('Network error. Please try again.');
         else { toast('Failed — try again'); if (el) el.classList.remove('busy'); }
@@ -610,7 +620,18 @@
       return { day: current, total };
     }
 
+    function portalKey() { return `africon_portal_${eventId}`; }
+
+    function goPortal() {
+      let t = null;
+      try { t = localStorage.getItem(portalKey()); } catch {}
+      if (t) location.href = '/sprint.html?t=' + encodeURIComponent(t);
+    }
+
     function showCongratsModal(name) {
+      let hasPortal = false;
+      try { hasPortal = isSprint && !!localStorage.getItem(portalKey()); } catch {}
+      document.getElementById('portal-btn').style.display = hasPortal ? 'block' : 'none';
       document.getElementById('congrats-name').textContent = name;
       document.getElementById('congrats-overlay').classList.add('open');
     }

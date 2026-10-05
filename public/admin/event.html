@@ -303,6 +303,7 @@
       const r = await fetch('/api/events/' + eventId, { headers: H });
       if (!r.ok) { window.location.replace('/admin/dashboard.html'); return; }
       eventData = await r.json();
+      if (eventData.kind === 'sprint') document.querySelector('.nav-back').href = '/admin/dashboard.html#sprint';
 
       document.getElementById('ev-title').textContent = eventData.name;
       const s   = new Date(eventData.start_date).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});

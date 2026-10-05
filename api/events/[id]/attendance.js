@@ -1,5 +1,5 @@
 const { pool, initDB } = require('../../_db');
-const { getToken, verifyToken } = require('../../_auth');
+const { getToken, verifyToken, signPortalToken } = require('../../_auth');
 const { checkContact, clientIp } = require('../../_contact');
 
 // Brute-force guards for the public verification step.
@@ -49,7 +49,7 @@ module.exports = async (req, res) => {
 
       if (!isAdmin) {
         if (!code) return res.status(401).json({ error: 'Access code required' });
-        const { rows: evRows } = await pool.query('SELECT access_code FROM events WHERE id = $1', [id]);
+        const { rows: evRows } = await pool.query('SELECT access_code, kind FROM events WHERE id = $1', [id]);
         if (!evRows.length) return res.status(404).json({ error: 'Event not found' });
         const stored = (evRows[0].access_code || '').toUpperCase();
         if (!stored || stored !== code.trim().toUpperCase()) {
@@ -127,6 +127,8 @@ module.exports = async (req, res) => {
           ...rows[0],
           attended_today: true,
           attendance_days: dayRows.map(r => r.day_date),
+          // AI Sprint participants continue to their personal Sprint page
+          ...(evRows[0].kind === 'sprint' ? { portal_token: signPortalToken(rows[0].id) } : {}),
         });
       }
 

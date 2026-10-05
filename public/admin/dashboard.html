@@ -55,6 +55,22 @@
     .empty{text-align:center;padding:32px;color:#aaa;font-size:13px}
     /* Repeat box */
     .repeat-box{background:#f8f9fa;border:1px solid #e0e0e0;border-radius:6px;padding:14px;margin-top:10px;display:none}
+    /* AI Sprint */
+    .track-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+    .track{border:1px solid #e6e9ef;border-radius:8px;padding:14px;cursor:pointer;transition:all .15s}
+    .track:hover{border-color:#0052CC;box-shadow:0 2px 8px rgba(0,82,204,.1)}
+    .track-title{font-weight:700;font-size:13.5px;color:#222}
+    .track-time{font-size:11px;color:#999;margin-top:2px}
+    .track-flags{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+    .flag{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:10px}
+    .flag-ok{background:#d4edda;color:#155724}
+    .flag-miss{background:#fde8e8;color:#9b1c1c}
+    .flag-info{background:#eef3ff;color:#0052CC}
+    .week-row td{background:#f4f6fa;font-weight:700;font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.5px}
+    .code{font-family:monospace;font-weight:700;letter-spacing:1px;color:#0052CC}
+    .btn-sm{background:#eef3ff;color:#0052CC;border:none;border-radius:5px;padding:5px 9px;font-size:12px;cursor:pointer}
+    .btn-sm:hover{background:#dce7ff}
+    .muted{color:#bbb}
     @media(max-width:640px){.grid2,.grid3{grid-template-columns:1fr}}
   </style>
 </head>
@@ -76,7 +92,8 @@
   </div>
 
   <div class="tabs">
-    <div class="tab active" onclick="tab('events')">Events</div>
+    <div class="tab active" onclick="tab('events')">Masterclass</div>
+    <div class="tab" onclick="tab('sprint')">AI Sprint</div>
     <div class="tab" onclick="tab('admins')">Admins</div>
   </div>
 
@@ -155,6 +172,25 @@
     </div>
   </div>
 
+  <!-- AI SPRINT PANE -->
+  <div id="pane-sprint" class="pane">
+    <div class="card">
+      <div class="card-hd">
+        <h3><i class="fas fa-layer-group" style="color:#0052CC;margin-right:6px"></i>Sprint Content</h3>
+        <span style="font-size:12px;color:#999">Shown to participants after they check in</span>
+      </div>
+      <div class="card-body"><div class="track-grid" id="track-grid"><div class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <h3><i class="fas fa-calendar-week" style="color:#0052CC;margin-right:6px"></i>Sprint Sessions <span id="sp-count" style="font-size:12px;color:#999;font-weight:400"></span></h3>
+        <select id="sp-week" onchange="renderSessions()" style="width:auto;padding:7px 10px"></select>
+      </div>
+      <div id="sp-list" style="overflow-x:auto"><div class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+    </div>
+  </div>
+
   <!-- ADMINS PANE -->
   <div id="pane-admins" class="pane">
     <div class="card">
@@ -195,12 +231,15 @@
       document.getElementById('admin-name').textContent = me.name;
       loadEvents();
       loadAdmins();
+      loadSprint();
+      if (location.hash === '#sprint') tab('sprint');
     } catch(e) { toast('Could not connect to server', 'error'); }
   }
 
   /* ── TABS ── */
   function tab(name) {
-    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['events','admins'][i] === name));
+    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['events','sprint','admins'][i] === name));
+    history.replaceState(null, '', name === 'sprint' ? '#sprint' : location.pathname);
     document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
     document.getElementById('pane-' + name).classList.add('active');
   }
@@ -341,6 +380,97 @@
     if (!e) return fmt(s);
     const fs = fmt(s), fe = fmt(e);
     return fs === fe ? fs : fs + ' – ' + fe;
+  }
+
+  /* ── AI SPRINT ── */
+  let sprintSessions = [];
+
+  async function loadSprint() {
+    try {
+      const [tr, sr] = await Promise.all([
+        fetch('/api/sprint?action=tracks', { headers: H }),
+        fetch('/api/sprint?action=sessions', { headers: H }),
+      ]);
+      if (tr.ok) renderTracks(await tr.json());
+      if (sr.ok) {
+        sprintSessions = await sr.json();
+        buildWeekFilter();
+        renderSessions();
+      }
+    } catch(e) { toast('Network error loading AI Sprint', 'error'); }
+  }
+
+  function renderTracks(tracks) {
+    document.getElementById('track-grid').innerHTML = tracks.map(t => `
+      <div class="track" onclick="location.href='/admin/sprint-track.html?key=${encodeURIComponent(t.key)}'">
+        <div class="track-title">${esc(t.title)}</div>
+        <div class="track-time">${esc(t.time_label || '')}</div>
+        <div class="track-flags">
+          <span class="flag ${t.assessment_url ? 'flag-ok' : 'flag-miss'}">${t.assessment_url ? '✓' : '✗'} Assessment</span>
+          <span class="flag ${t.playbook_url ? 'flag-ok' : 'flag-miss'}">${t.playbook_url ? '✓' : '✗'} Playbook</span>
+          <span class="flag flag-info">${t.resource_count} asset${t.resource_count === 1 ? '' : 's'}</span>
+        </div>
+      </div>`).join('');
+  }
+
+  function buildWeekFilter() {
+    const sel = document.getElementById('sp-week');
+    const weeks = [...new Set(sprintSessions.map(s => s.week_no))].sort((a,b) => a-b);
+    const today = new Date().toLocaleDateString('en-CA');
+    // Default to the current week (or the next upcoming one)
+    const upcoming = sprintSessions.find(s => s.date >= today);
+    const current = upcoming ? upcoming.week_no : 'all';
+    sel.innerHTML = '<option value="all">All weeks</option>' + weeks.map(w => {
+      const days = sprintSessions.filter(s => s.week_no === w);
+      return `<option value="${w}">Week ${w} — ${shortDate(days[0].date)}${w === 12 ? ' (online only)' : ''}</option>`;
+    }).join('');
+    sel.value = String(current);
+  }
+
+  function renderSessions() {
+    const week = document.getElementById('sp-week').value;
+    const list = week === 'all' ? sprintSessions : sprintSessions.filter(s => String(s.week_no) === week);
+    document.getElementById('sp-count').textContent = `(${list.length})`;
+    const el = document.getElementById('sp-list');
+    if (!list.length) { el.innerHTML = '<div class="empty">No sessions.</div>'; return; }
+
+    let lastWeek = null;
+    const rows = list.map(s => {
+      let head = '';
+      if (week === 'all' && s.week_no !== lastWeek) {
+        lastWeek = s.week_no;
+        head = `<tr class="week-row"><td colspan="9">Week ${s.week_no}${s.week_no === 12 ? ' · Online only' : ''}</td></tr>`;
+      }
+      const online = s.delivery_mode === 'online';
+      const inPerson = online ? '<span class="muted">—</span>' : (s.facilitator_in_person ? esc(s.facilitator_in_person) : '<span class="muted">N/A</span>');
+      const virtual = esc(s.facilitator_virtual || '') + (s.facilitator_support ? ` <small style="color:#999">+ ${esc(s.facilitator_support)}</small>` : '');
+      return head + `<tr class="ev-row" onclick="goEvent(${s.id})">
+        <td style="white-space:nowrap">${shortDate(s.date)}<br><small style="color:#999">${esc(s.time_label || s.session_time || '')}</small></td>
+        <td><strong>${esc(s.track_title || s.name)}</strong></td>
+        <td>${inPerson}</td>
+        <td>${virtual}</td>
+        <td><span class="code">${esc(s.access_code || '')}</span></td>
+        <td>${s.total_attendees}</td>
+        <td>${s.attended_count}</td>
+        <td>${s.attended_count ? `${s.assessment_count}/${s.attended_count}` : '<span class="muted">—</span>'}</td>
+        <td><button class="btn-sm" data-slug="${esc(s.slug)}" onclick="event.stopPropagation();copySprintLink(this)" title="Copy check-in link"><i class="fas fa-link"></i></button></td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = `<table>
+      <thead><tr><th>Date</th><th>Sprint</th><th>In-Person</th><th>Virtual</th><th>Code</th><th>Reg.</th><th>Attended</th><th title="Participants who opened the post-assessment">Assessment</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  async function copySprintLink(btn) {
+    const url = location.origin + '/attend.html?event=' + btn.dataset.slug;
+    try { await navigator.clipboard.writeText(url); toast('Check-in link copied', 'success'); }
+    catch { prompt('Copy this link:', url); }
+  }
+
+  function shortDate(d) {
+    return new Date(String(d).slice(0,10) + 'T00:00:00').toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
   }
 
   /* ── ADMINS ── */
