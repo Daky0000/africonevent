@@ -42,6 +42,13 @@
     .res-img{max-width:200px;max-height:120px;border-radius:6px;margin-top:6px;border:1px solid #eee;display:block}
     .del{background:none;border:none;color:#c0392b;cursor:pointer;font-size:14px;padding:6px}
     .del:hover{color:#8e1d12}
+    .edit{background:none;border:none;color:#0052CC;cursor:pointer;font-size:14px;padding:6px}
+    .edit:hover{color:#003d99}
+    .res-edit{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+    .res-edit input,.res-edit textarea{width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;font-family:inherit}
+    .res-edit textarea{min-height:110px;resize:vertical}
+    .res-edit-actions{display:flex;gap:8px;justify-content:flex-end}
+    .btn-ghost{background:#fff;color:#444;border:1px solid #ddd}
     .empty{text-align:center;padding:28px;color:#aaa;font-size:13px}
     .datebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
     .datebar input{width:auto}
@@ -242,16 +249,29 @@
     const el = document.getElementById('r-list');
     if (!list.length) { el.innerHTML = '<div class="empty">Nothing shared yet. Add a prompt, link or file above.</div>'; return; }
     el.innerHTML = list.map(r => {
+      const icon = { prompt: 'fa-terminal', link: 'fa-link', file: 'fa-file-alt' }[r.kind];
+      if (r.id === editingId) return `<div class="res">
+        <div class="res-icon"><i class="fas ${icon}"></i></div>
+        <div class="res-edit">
+          <input id="e-title" value="${esc(r.title)}" placeholder="Title">
+          ${r.kind === 'link' ? `<input id="e-url" value="${esc(r.url)}" placeholder="https://…">` : ''}
+          <textarea id="e-body" placeholder="${r.kind === 'prompt' ? 'Prompt text' : 'Note (optional)'}">${esc(r.body || '')}</textarea>
+          <div class="res-edit-actions">
+            <button class="btn btn-ghost" onclick="cancelEdit()">Cancel</button>
+            <button class="btn btn-blue" id="e-save" onclick="saveEdit(${r.id})"><i class="fas fa-check"></i> Save</button>
+          </div>
+        </div>
+      </div>`;
       const fileUrl = `/api/sprint?action=file&id=${r.id}&t=${encodeURIComponent(token)}`;
       let detail = '';
       if (r.kind === 'prompt') detail = esc(r.body || '');
       if (r.kind === 'link') detail = `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.url)}</a>` + (r.body ? '\n' + esc(r.body) : '');
       if (r.kind === 'file') detail = `<a href="${fileUrl}" target="_blank">${esc(r.file_name)}</a> · ${fmtSize(r.file_size)}` + (r.body ? '\n' + esc(r.body) : '');
       const img = r.kind === 'file' && /^image\//.test(r.file_mime || '') ? `<img class="res-img" src="${fileUrl}" alt="">` : '';
-      const icon = { prompt: 'fa-terminal', link: 'fa-link', file: 'fa-file-alt' }[r.kind];
       return `<div class="res">
         <div class="res-icon"><i class="fas ${icon}"></i></div>
         <div class="res-main"><div class="res-title">${esc(r.title)}</div><div class="res-detail">${detail}</div>${img}</div>
+        <button class="edit" title="Edit" onclick="startEdit(${r.id})"><i class="fas fa-pen"></i></button>
         <button class="del" title="Delete" onclick="delResource(${r.id})"><i class="fas fa-trash"></i></button>
       </div>`;
     }).join('');
@@ -334,6 +354,46 @@
       toast('Added', 'success');
     } catch { toast('Network error', 'error'); }
     finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus"></i> Add'; }
+  }
+
+  let editingId = null;
+
+  function startEdit(id) {
+    editingId = id;
+    renderResources();
+    const t = document.getElementById('e-body');
+    if (t) t.focus();
+  }
+
+  function cancelEdit() {
+    editingId = null;
+    renderResources();
+  }
+
+  async function saveEdit(id) {
+    const r0 = track.resources.find(x => x.id === id);
+    const title = document.getElementById('e-title').value.trim();
+    const body = document.getElementById('e-body').value;
+    const urlEl = document.getElementById('e-url');
+    const url = urlEl ? urlEl.value.trim() : undefined;
+    if (!title) return toast('Please enter a title', 'error');
+    if (r0.kind === 'prompt' && !body.trim()) return toast('Prompt text cannot be empty', 'error');
+    if (r0.kind === 'link' && !url) return toast('Please enter the link', 'error');
+
+    const btn = document.getElementById('e-save');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+    try {
+      const r = await fetch('/api/sprint?action=resource&id=' + id, {
+        method: 'PATCH', headers: H, body: JSON.stringify({ title, body, url }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { toast(d.error || 'Failed to save', 'error'); return; }
+      track.resources = track.resources.map(x => x.id === id ? d : x);
+      editingId = null;
+      renderResources();
+      toast('Saved', 'success');
+    } catch { toast('Network error', 'error'); }
+    finally { if (btn.isConnected) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Save'; } }
   }
 
   async function delResource(id) {
