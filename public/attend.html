@@ -220,6 +220,9 @@
           <i class="fas fa-unlock"></i> Enter
         </button>
       </div>
+      <a id="my-page-link" href="/sprint.html" style="display:none;margin-top:16px;font-size:13px;color:#0052CC;font-weight:600;text-decoration:none">
+        Already checked in? Open my Sprint page →
+      </a>
     </div>
 
     <!-- Attendance view (hidden until code verified) -->
@@ -341,6 +344,14 @@
           const badge = document.getElementById('day-badge');
           badge.textContent = dayInfo.total > 1 ? `Day ${dayInfo.day} of ${dayInfo.total}` : 'Day 1';
           badge.style.display = 'inline-block';
+        }
+
+        // AI Sprint: anyone who already checked in to this session goes straight to their page
+        if (isSprint) {
+          let t = null;
+          try { t = localStorage.getItem(portalKey()); } catch {}
+          if (t) { location.replace('/sprint.html?t=' + encodeURIComponent(t)); return; }
+          document.getElementById('my-page-link').style.display = 'block';
         }
 
         // If we already verified the code this session, skip the gate
@@ -574,7 +585,10 @@
         // Lock this browser so refresh can't re-open the list
         localStorage.setItem(todayKey(), JSON.stringify({ name: data.name }));
         if (data.portal_token) {
-          try { localStorage.setItem(portalKey(), data.portal_token); } catch {}
+          try {
+            localStorage.setItem(portalKey(), data.portal_token);
+            localStorage.setItem('africon_portal', data.portal_token);
+          } catch {}
         }
         showCongratsModal(data.name);
         // AI Sprint: take the participant on to their Sprint page

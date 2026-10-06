@@ -87,19 +87,80 @@
 
   <script>
     const params = new URLSearchParams(location.search);
-    const token = params.get('t');
+    let token = params.get('t');
+    try {
+      if (token) localStorage.setItem('africon_portal', token);
+      else token = localStorage.getItem('africon_portal');
+    } catch {}
     let data = null;
 
     async function init() {
-      if (!token) return fail('This link is incomplete. Please check in from the attendance page.');
+      if (!token) return showLogin();
       try {
         const r = await fetch('/api/sprint?action=portal&t=' + encodeURIComponent(token));
         const body = await r.json().catch(() => ({}));
+        if (r.status === 401 || r.status === 404) return showLogin('Your session has expired. Sign in again to see your page.');
         if (!r.ok) return fail(body.error || 'Could not load your Sprint page.');
         data = body;
         render();
       } catch {
         fail('Network error. Please refresh the page.');
+      }
+    }
+
+    let loginMethod = 'phone';
+
+    function showLogin(note) {
+      try { localStorage.removeItem('africon_portal'); } catch {}
+      document.getElementById('hello').textContent = 'AI Sprints';
+      document.getElementById('hello-sub').textContent = 'Open your participant page';
+      document.getElementById('content').innerHTML = `<div class="card" style="padding:24px">
+        ${note ? `<p style="font-size:13px;color:#b45309;margin:0 0 14px">${esc(note)}</p>` : ''}
+        <p style="font-size:14px;color:#444;margin:0 0 14px">Already checked in? Enter the phone number or email you registered with.</p>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button class="btn btn-full" id="lm-phone" onclick="setLoginMethod('phone')"><i class="fas fa-phone"></i> Phone</button>
+          <button class="btn btn-full" id="lm-email" onclick="setLoginMethod('email')"><i class="fas fa-envelope"></i> Email</button>
+        </div>
+        <input id="login-input" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:15px;font-family:inherit;box-sizing:border-box"
+               onkeydown="if(event.key==='Enter')submitLogin()">
+        <div id="login-error" style="color:#dc3545;font-size:13px;min-height:18px;margin:8px 0"></div>
+        <button class="btn btn-blue btn-full" id="login-btn" onclick="submitLogin()"><i class="fas fa-arrow-right"></i> Open my page</button>
+      </div>`;
+      setLoginMethod(loginMethod);
+    }
+
+    function setLoginMethod(m) {
+      loginMethod = m;
+      const isPhone = m === 'phone';
+      document.getElementById('lm-phone').className = 'btn btn-full ' + (isPhone ? 'btn-blue' : '');
+      document.getElementById('lm-email').className = 'btn btn-full ' + (isPhone ? '' : 'btn-blue');
+      const inp = document.getElementById('login-input');
+      inp.type = isPhone ? 'tel' : 'email';
+      inp.placeholder = isPhone ? 'e.g. 0244123456' : 'e.g. you@email.com';
+      inp.focus();
+    }
+
+    async function submitLogin() {
+      const value = document.getElementById('login-input').value.trim();
+      const err = document.getElementById('login-error');
+      if (!value) { err.textContent = loginMethod === 'phone' ? 'Please enter your phone number.' : 'Please enter your email address.'; return; }
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking…';
+      try {
+        const r = await fetch('/api/sprint?action=login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method: loginMethod, contact: value }),
+        });
+        const body = await r.json().catch(() => ({}));
+        if (!r.ok) { err.textContent = body.error || 'Something went wrong. Please try again.'; return; }
+        token = body.portal_token;
+        try { localStorage.setItem('africon_portal', token); } catch {}
+        history.replaceState(null, '', '/sprint.html?t=' + encodeURIComponent(token));
+        init();
+      } catch {
+        err.textContent = 'Network error. Please try again.';
+      } finally {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-arrow-right"></i> Open my page';
       }
     }
 

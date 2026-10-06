@@ -140,6 +140,9 @@ async function initDB() {
     ON verification_attempts (attendee_id, attempted_at)
   `);
 
+  // Sprint page sign-in attempts aren't tied to one event
+  await pool.query(`ALTER TABLE verification_attempts ALTER COLUMN event_id DROP NOT NULL`);
+
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_verification_attempts_ip
     ON verification_attempts (event_id, ip_address, attempted_at)

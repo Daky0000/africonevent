@@ -8,6 +8,8 @@
 //   POST   ?action=resource           { event_id, kind, title, body, url, file_name, file_mime, file_base64 }
 //   PATCH  ?action=resource&id=N      { title, body, url }
 //   DELETE ?action=resource&id=N
+// Participant sign-in (no token):
+//   POST   ?action=login              { method: 'phone'|'email', contact } returns a fresh portal token
 // Participant (portal token from check-in, ?t=):
 //   GET    ?action=portal             the participant's Sprint page
 //   POST   ?action=assessment         { attendee_id } records that the assessment was opened
@@ -15,7 +17,8 @@
 //   GET    ?action=file&id=N          download an uploaded asset
 
 const { pool, initDB } = require('./_db');
-const { requireAuth, getToken, verifyToken, verifyPortalToken } = require('./_auth');
+const { requireAuth, getToken, verifyToken, signPortalToken, verifyPortalToken } = require('./_auth');
+const { phoneMatches, emailMatches, clientIp } = require('./_contact');
 
 const MAX_FILE_BYTES = 3 * 1024 * 1024; // keeps the upload under the 4.5 MB request limit
 const KINDS = ['prompt', 'link', 'file'];
@@ -126,6 +129,49 @@ module.exports = async (req, res) => {
           assessment_opened: !!s.assessment_opened_at,
         })),
       });
+    }
+
+    if (action === 'login' && req.method === 'POST') {
+      const { method, contact } = req.body || {};
+      const value = String(contact || '').trim();
+      if (!['phone', 'email'].includes(method) || !value) {
+        return res.status(400).json({ error: 'Enter your phone number or email address.' });
+      }
+      const ip = clientIp(req);
+      const { rows: [f] } = await pool.query(
+        `SELECT COUNT(*)::int AS n FROM verification_attempts
+         WHERE event_id IS NULL AND ip_address = $1 AND succeeded = FALSE
+           AND attempted_at > NOW() - INTERVAL '15 minutes'`,
+        [ip]
+      );
+      if (f.n >= 10) {
+        return res.status(429).json({ error: 'Too many failed attempts. Please wait 15 minutes and try again.' });
+      }
+
+      // Only people who have checked in to at least one Sprint have a page
+      const { rows } = await pool.query(
+        `SELECT a.id, a.phone, a.email FROM attendees a
+         JOIN events e ON e.id = a.event_id AND e.kind = 'sprint'
+         WHERE a.attended
+         ORDER BY e.start_date DESC, e.session_time DESC`
+      );
+      const match = rows.find(a => method === 'phone'
+        ? a.phone && phoneMatches(value, a.phone)
+        : a.email && emailMatches(value, a.email));
+
+      await pool.query(
+        `INSERT INTO verification_attempts (event_id, attendee_id, ip_address, succeeded) VALUES (NULL, $1, $2, $3)`,
+        [match ? match.id : null, ip, !!match]
+      ).catch(() => {});
+
+      if (!match) {
+        return res.status(404).json({
+          error: method === 'phone'
+            ? "We couldn't find a checked-in participant with that phone number."
+            : "We couldn't find a checked-in participant with that email address.",
+        });
+      }
+      return res.status(200).json({ portal_token: signPortalToken(match.id) });
     }
 
     if (action === 'assessment' && req.method === 'POST') {
