@@ -45,7 +45,9 @@ module.exports = async (req, res) => {
       if (!attendee_id) return res.status(400).json({ error: 'attendee_id required' });
 
       const token = getToken(req);
-      const isAdmin = token ? !!verifyToken(token) : false;
+      // The public check-in page always sends the access code, so it runs the
+      // participant flow even in a browser where an admin is signed in.
+      const isAdmin = !code && token ? !!verifyToken(token) : false;
 
       if (!isAdmin) {
         if (!code) return res.status(401).json({ error: 'Access code required' });
